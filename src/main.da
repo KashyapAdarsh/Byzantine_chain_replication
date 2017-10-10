@@ -1,0 +1,46 @@
+import os
+from logger import *
+import time
+import sys
+
+# Global config map that contains all configurations
+config = {}
+
+# Reads all the configurations from the file
+def readConfig(file, log):
+	lines = None
+	try:
+		lines = open(file, "r").readlines()
+	except:
+		log.error(file + " : No such file or directory")
+		exit()
+
+	for line in lines:
+		if (not line.startswith('#') and not line.startswith('\n')):
+			config[line.split('=')[0].strip()] = line.split('=')[1].strip()
+
+# Might need this to verify if all configurations are read properly
+def verifyConfig():
+	pass
+
+def main():
+
+	file = "../config/default.config"
+	log = setup_custom_logger("myapp")
+
+	log.info("Starting the execution from main")
+
+	if(len(sys.argv) == 1):
+		log.info("Using default config file : " + "config/default.config")
+	else:
+		log.info("Using custom config : " + sys.argv[1])
+		file = sys.argv[1]
+
+	readConfig(file, log)
+	log.info("Config : " + str(config))	
+
+
+
+	
+
+

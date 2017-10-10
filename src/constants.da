@@ -1,0 +1,10 @@
+# This file contains all the constants used multiple files
+
+# Constants related to configuration
+
+TESTCASE_NAME = testcase_name
+TOLERENCE = t
+CLIENT_COUNT = num_client
+CLIENT_TIMEOUT = client_timeout
+HEAD_TIMEOUT = head_timeout
+NONHEAD_TIMEOUT = nonhead_timeout
