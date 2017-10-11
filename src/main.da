@@ -2,12 +2,12 @@ import os
 from logger import *
 import time
 import sys
-
-# Global config map that contains all configurations
-config = {}
+from olympus import Olympus
+from constants import *
 
 # Reads all the configurations from the file
-def readConfig(file, log):
+def read_config(file, log):
+	config = {}
 	lines = None
 	try:
 		lines = open(file, "r").readlines()
@@ -18,29 +18,35 @@ def readConfig(file, log):
 	for line in lines:
 		if (not line.startswith('#') and not line.startswith('\n')):
 			config[line.split('=')[0].strip()] = line.split('=')[1].strip()
+	return config		
 
 # Might need this to verify if all configurations are read properly
-def verifyConfig():
+def verify_config():
 	pass
 
 def main():
+
+	# Helper methods required to initialize the system
+	def initialize_olympus(log, config):
+		log.info("Initializing olympus")
+		olympus = new(Olympus, num=1)
+		setup(olympus, [config])
+		start(olympus)
+
+	# Program starts execution from here
 
 	file = "../config/default.config"
 	log = setup_custom_logger("myapp")
 
 	log.info("Starting the execution from main")
-
 	if(len(sys.argv) == 1):
 		log.info("Using default config file : " + "config/default.config")
 	else:
 		log.info("Using custom config : " + sys.argv[1])
 		file = sys.argv[1]
 
-	readConfig(file, log)
-	log.info("Config : " + str(config))	
+	config = read_config(file, log)
+	log.info("Config received: " + str(config))
 
-
-
-	
-
-
+	# Initialize Olympus
+	initialize_olympus(log, config)
