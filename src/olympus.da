@@ -1,0 +1,33 @@
+from logger import *
+from classes import *
+from constants import *
+import time
+import sys
+
+class Olympus(process):
+
+	def setup(init_config):
+		self.client_config = dict()
+		self.clients = dict()
+		self.replicas = dict()
+		self.configs = []
+		self.wedged_data = dict()
+		self.dataStore = dict()
+		self.head_timeout = init_config[HEAD_TIMEOUT]
+		self.nonhead_timeout = init_config[NONHEAD_TIMEOUT]
+		self.head = None
+		self.no_of_replicas = (2 * float(init_config[TOLERENCE])) + 1 # 2t+1
+		self.privateKey = None
+
+	def run():
+		print("In run of olympus")
+
+	def make_new_replica():
+		pass
+
+	def spawn_replicas():
+		pass
+
+	def make_replica_config():
+		pass
+

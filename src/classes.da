@@ -1,0 +1,21 @@
+import uuid
+
+class data:
+    def __init__(self, key, value):
+        self.key = key
+        self.value = value
+
+# intial configurations that every replica will receive
+
+class ReplicaConfig:
+	def __init__(self, replicas,clients, dataStore, mode):
+		self.replicaId = uuid.uuid4()
+		self.headId = None
+		self.replicas = replicas
+		self.prevReplicaId = None
+		self.nextReplicaId = None
+		self.clients = clients
+		self.isHead = False
+		self.isTail = False
+		self.dataStore = dataStore
+		self.mode = mode
