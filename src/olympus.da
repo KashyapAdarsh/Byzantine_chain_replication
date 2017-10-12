@@ -57,12 +57,12 @@ class Olympus(process):
 	def add_head_tail(replica_index, replica_config):
 		if (replica_index == 0):
 			replica_config.is_head = True
-			replica_config.next_replica_id = self.replica_list[replica_index+1]
-		elif (replica_index == len(self.replica_list)-1):
+			replica_config.next_replica_id = self.replica_list[replica_index + 1]
+		elif (replica_index == len(self.replica_list) - 1):
 			replica_config.is_tail = True
-			replica_config.prev_replica_id = self.replica_list[replica_index-1]
+			replica_config.prev_replica_id = self.replica_list[replica_index - 1]
 		else:
-			replica_config.next_replica_id = self.replica_list[replica_index+1]
-			replica_config.prev_replica_id = self.replica_list[replica_index-1]
+			replica_config.next_replica_id = self.replica_list[replica_index + 1]
+			replica_config.prev_replica_id = self.replica_list[replica_index - 1]
 
 		return replica_config
