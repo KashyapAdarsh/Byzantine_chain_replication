@@ -1,6 +1,8 @@
 from logger import *
 from classes import *
 from constants import *
+from replica import Replica
+import uuid
 import time
 import sys
 
@@ -10,24 +12,57 @@ class Olympus(process):
 		self.client_config = dict()
 		self.clients = dict()
 		self.replicas = dict()
+		self.olympus_id = uuid.uuid4()
 		self.configs = []
+		self.replica_list = None
+		self.active_config = None
 		self.wedged_data = dict()
-		self.dataStore = dict()
+		self.data_store = dict()
 		self.head_timeout = init_config[HEAD_TIMEOUT]
 		self.nonhead_timeout = init_config[NONHEAD_TIMEOUT]
 		self.head = None
 		self.no_of_replicas = (2 * float(init_config[TOLERENCE])) + 1 # 2t+1
 		self.privateKey = None
+		log.info("Olympus setup complete, assigned ID :" + str(self.olympus_id))
 
 	def run():
-		print("In run of olympus")
+		make_new_replica()
 
 	def make_new_replica():
-		pass
+		config_id = uuid.uuid4()
+		spawn_replicas()
+		active_config = config_id
+		configs.append(config_id)
 
 	def spawn_replicas():
+		if (self.replica_list == None):
+			log.info("Creating new replicas.")
+			self.replica_list = new(Replica, num=int(self.no_of_replicas))
+			# Converting set to list
+			self.replica_list = list(self.replica_list)
+			for replica in range(len(self.replica_list)):
+				replica_config = make_replica_config()
+				replica_config = add_head_tail(replica, replica_config)
+				setup(self.replica_list[replica],[replica_config])
+				start(self.replica_list[replica])
+		else:
+			log.info("Deleting old replicas.")
+			pass
 		pass
 
 	def make_replica_config():
-		pass
+		replica_config = ReplicaConfig(self.replicas, self.clients, self.data_store, "ACTIVE")
+		return replica_config
 
+	def add_head_tail(replica_index, replica_config):
+		if (replica_index == 0):
+			replica_config.is_head = True
+			replica_config.next_replica_id = self.replica_list[replica_index+1]
+		elif (replica_index == len(self.replica_list)-1):
+			replica_config.is_tail = True
+			replica_config.prev_replica_id = self.replica_list[replica_index-1]
+		else:
+			replica_config.next_replica_id = self.replica_list[replica_index+1]
+			replica_config.prev_replica_id = self.replica_list[replica_index-1]
+
+		return replica_config

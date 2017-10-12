@@ -36,7 +36,6 @@ def main():
 	# Program starts execution from here
 
 	file = "../config/default.config"
-	log = setup_custom_logger("myapp")
 
 	log.info("Starting the execution from main")
 	if(len(sys.argv) == 1):

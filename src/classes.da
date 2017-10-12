@@ -8,14 +8,14 @@ class data:
 # intial configurations that every replica will receive
 
 class ReplicaConfig:
-	def __init__(self, replicas,clients, dataStore, mode):
-		self.replicaId = uuid.uuid4()
-		self.headId = None
+	def __init__(self, replicas, clients, data_store, mode):
+		self.replica_id = uuid.uuid4()
+		self.head_id = None
 		self.replicas = replicas
-		self.prevReplicaId = None
-		self.nextReplicaId = None
+		self.prev_replica_id = None
+		self.next_replica_id = None
 		self.clients = clients
-		self.isHead = False
-		self.isTail = False
-		self.dataStore = dataStore
+		self.is_head = False
+		self.is_tail = False
+		self.data_store = data_store
 		self.mode = mode

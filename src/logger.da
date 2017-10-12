@@ -13,3 +13,5 @@ def setup_custom_logger(name):
     logger.addHandler(handler)
     logger.addHandler(screen_handler)
     return logger
+
+log = setup_custom_logger("ByzantineChainReplication")
