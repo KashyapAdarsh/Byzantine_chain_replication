@@ -19,3 +19,12 @@ class ReplicaConfig:
 		self.is_tail = False
 		self.data_store = data_store
 		self.mode = mode
+
+# Configuration object that everyclient will receive
+
+class clientConfig:
+	def __init__(self, replicas):
+		self.client_id = uuid.uuid4()
+		self.replicas = replicas
+		self.head_id = None
+		self.tail_id = None

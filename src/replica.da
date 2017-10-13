@@ -9,11 +9,13 @@ class Replica(process):
 
 	def setup(replica_config):
 		self.config = replica_config
-		log.info("In setup of replica : " + str(self.config.replica_id))
+		log.info("Setup for replica " + str(self.config.replica_id) + " complete.")
 
 	def run():
-		print("Running replica : " + str(self.config.replica_id))
+		pass
+		'''
 		if (self.config.prev_replica_id is not None):
 			log.info("My prev ID : "+ str(self.config.prev_replica_id))
 		if (self.config.next_replica_id is not None):
 			log.info("My next ID : "+ str(self.config.next_replica_id))
+		'''

@@ -22,17 +22,26 @@ class Olympus(process):
 		self.nonhead_timeout = init_config[NONHEAD_TIMEOUT]
 		self.head = None
 		self.no_of_replicas = (2 * float(init_config[TOLERENCE])) + 1 # 2t+1
+		self.no_of_clients = float(init_config[CLIENT_COUNT])
 		self.privateKey = None
 		log.info("Olympus setup complete, assigned ID :" + str(self.olympus_id))
 
 	def run():
 		make_new_replica()
 
+		# Wait untill all the clients register with olympus
+		await(len(self.clients) == self.no_of_clients)
+		log.info("All clients registered successfully.")
+
 	def make_new_replica():
 		config_id = uuid.uuid4()
 		spawn_replicas()
 		active_config = config_id
 		configs.append(config_id)
+
+	# This method spawns required number of replica and it handles two cases
+	# 1) If we are spawning for the first time
+	# 2) If we are reconfiguring
 
 	def spawn_replicas():
 		if (self.replica_list == None):
@@ -50,10 +59,12 @@ class Olympus(process):
 			pass
 		pass
 
+	# This method creates a configuration object for replicas
 	def make_replica_config():
 		replica_config = ReplicaConfig(self.replicas, self.clients, self.data_store, "ACTIVE")
 		return replica_config
 
+	# This method adds head and tail info for every replicaconfig object created.
 	def add_head_tail(replica_index, replica_config):
 		if (replica_index == 0):
 			replica_config.is_head = True
@@ -66,3 +77,11 @@ class Olympus(process):
 			replica_config.prev_replica_id = self.replica_list[replica_index - 1]
 
 		return replica_config
+
+
+	################### Receivers for olympus ######################
+
+	# Receiver for registering client with olympus
+	def receive(msg=("register_client", client_id, client_key), from_=c):
+		log.info("Received request to register client : " + str(client_id))
+		self.clients[client_id] = client_key

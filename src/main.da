@@ -4,6 +4,7 @@ import time
 import sys
 from olympus import Olympus
 from constants import *
+from client import Client
 
 # Reads all the configurations from the file
 def read_config(file, log):
@@ -27,15 +28,23 @@ def verify_config():
 def main():
 
 	# Helper methods required to initialize the system
-	def initialize_olympus(log, config):
+	def initialize_olympus(config):
 		log.info("Initializing olympus")
 		olympus = new(Olympus, num=1)
 		setup(olympus, [config])
 		start(olympus)
+		return olympus
+
+	def initialize_client(config, olympus, num):
+		log.info("Initializing clients")
+		client = new(Client, num=num)
+		setup(client, [olympus, config])
+		start(client)
 
 	# Program starts execution from here
 
 	file = "../config/default.config"
+	olympus = None
 
 	log.info("Starting the execution from main")
 	if(len(sys.argv) == 1):
@@ -48,4 +57,9 @@ def main():
 	log.info("Config received: " + str(config))
 
 	# Initialize Olympus
-	initialize_olympus(log, config)
+	olympus = initialize_olympus(config)
+
+	time.sleep(1)
+
+	# Initialize a client
+	initialize_client(config, olympus, int(config[CLIENT_COUNT]))
