@@ -5,13 +5,16 @@ from replica import Replica
 import uuid
 import time
 import sys
+import nacl.encoding
+import nacl.signing
 
 class Olympus(process):
 
 	def setup(init_config):
 		self.client_config = dict()
 		self.clients = dict()
-		self.replicas = dict()
+		self.signing_keys = dict()
+		self.verify_keys = dict()
 		self.olympus_id = uuid.uuid4()
 		self.configs = []
 		self.replica_list = None
@@ -24,14 +27,15 @@ class Olympus(process):
 		self.no_of_replicas = (2 * float(init_config[TOLERENCE])) + 1 # 2t+1
 		self.no_of_clients = float(init_config[CLIENT_COUNT])
 		self.privateKey = None
-		log.info("Olympus setup complete, assigned ID :" + str(self.olympus_id))
+		self.INFO = "[OLYMPUS] "
+		log.info(self.INFO + "Olympus setup complete, assigned ID :" + str(self.olympus_id))
 
 	def run():
 		make_new_replica()
 
 		# Wait untill all the clients register with olympus
 		await(len(self.clients) == self.no_of_clients)
-		log.info("All clients registered successfully.")
+		log.info(self.INFO + "All clients registered successfully.")
 
 	def make_new_replica():
 		config_id = uuid.uuid4()
@@ -45,26 +49,49 @@ class Olympus(process):
 
 	def spawn_replicas():
 		if (self.replica_list == None):
-			log.info("Creating new replicas.")
+			log.info(self.INFO + "Creating new replicas.")
 			self.replica_list = new(Replica, num=int(self.no_of_replicas))
 			# Converting set to list
 			self.replica_list = list(self.replica_list)
-			for replica in range(len(self.replica_list)):
-				replica_config = make_replica_config()
-				replica_config = add_head_tail(replica, replica_config)
-				setup(self.replica_list[replica],[replica_config])
-				start(self.replica_list[replica])
+
+			generate_keys()
+
+			for index in range(len(self.replica_list)):
+				replica_config = make_replica_config(replica_list[index], \
+											signing_keys[replica_list[index]])
+				replica_config = add_head_tail(index, replica_config)
+				setup(self.replica_list[index],[replica_config])
+				start(self.replica_list[index])
 		else:
-			log.info("Deleting old replicas.")
+			log.info(self.INFO + "Deleting old replicas.")
 			pass
 		pass
 
-	# This method creates a configuration object for replicas
-	def make_replica_config():
-		replica_config = ReplicaConfig(self.replicas, self.clients, self.data_store, "ACTIVE")
+	# This method will generate signing keys and encoded verification keys for
+	# all the replicas. We save it into two seperate dict.
+	# <replica_id, signing key> and <replica_id, verification key>
+
+	def generate_keys():
+		log.info(self.INFO + "Generating signing and verification keys.")
+
+		for replica in self.replica_list:
+			signing_key = nacl.signing.SigningKey.generate()
+			verify_key = signing_key.verify_key
+			verify_key_hex = verify_key.encode(encoder=nacl.encoding.HexEncoder)
+			signing_keys[replica] = signing_key
+			verify_keys[replica] = verify_key_hex
+
+	# This method creates a configuration object for a replica
+	# @arg - specific signing key, that will be sent only to this replica
+
+	def make_replica_config(id, signing_key):
+		replica_config = ReplicaConfig(id, self.verify_keys, signing_key, self.clients, self.data_store, "ACTIVE")
 		return replica_config
 
 	# This method adds head and tail info for every replicaconfig object created.
+	# We add next and prev replica details for the current replica.
+	# we also set is_head and is_tail for current replica here
+
 	def add_head_tail(replica_index, replica_config):
 		if (replica_index == 0):
 			replica_config.is_head = True
@@ -78,10 +105,9 @@ class Olympus(process):
 
 		return replica_config
 
-
 	################### Receivers for olympus ######################
 
-	# Receiver for registering client with olympus
+	# Receiver for registering client with olympus.
 	def receive(msg=("register_client", client_id, client_key), from_=c):
-		log.info("Received request to register client : " + str(client_id))
+		log.info(self.INFO + "Received request to register client : " + str(client_id))
 		self.clients[client_id] = client_key

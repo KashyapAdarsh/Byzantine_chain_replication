@@ -29,32 +29,35 @@ def main():
 
 	# Helper methods required to initialize the system
 	def initialize_olympus(config):
-		log.info("Initializing olympus")
+		log.info(INFO + "Initializing olympus")
 		olympus = new(Olympus, num=1)
 		setup(olympus, [config])
 		start(olympus)
 		return olympus
 
 	def initialize_client(config, olympus, num):
-		log.info("Initializing clients")
-		client = new(Client, num=num)
-		setup(client, [olympus, config])
-		start(client)
+		log.info(INFO + "Initializing clients")
+		clients = new(Client, num=num)
+		for client in clients:
+			setup(client, [olympus, client, config])
+			start(client)
 
 	# Program starts execution from here
 
 	file = "../config/default.config"
 	olympus = None
+	INFO = "[MAIN] "
 
-	log.info("Starting the execution from main")
 	if(len(sys.argv) == 1):
-		log.info("Using default config file : " + "config/default.config")
+		set_file_name("default_config")
+		log.info(INFO  + "Using default config file : " + "config/default.config")
 	else:
-		log.info("Using custom config : " + sys.argv[1])
+		set_file_name(sys.argv[1])
+		log.info(INFO + "Using custom config : " + sys.argv[1])
 		file = sys.argv[1]
 
 	config = read_config(file, log)
-	log.info("Config received: " + str(config))
+	log.info(INFO + "Config received: " + str(config))
 
 	# Initialize Olympus
 	olympus = initialize_olympus(config)
@@ -63,3 +66,4 @@ def main():
 
 	# Initialize a client
 	initialize_client(config, olympus, int(config[CLIENT_COUNT]))
+

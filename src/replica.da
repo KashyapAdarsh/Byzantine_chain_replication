@@ -7,9 +7,12 @@ import sys
 
 class Replica(process):
 
+	
+
 	def setup(replica_config):
 		self.config = replica_config
-		log.info("Setup for replica " + str(self.config.replica_id) + " complete.")
+		self.INFO = "["+str(self.config.id).replace('>', "").replace('<', '')+"] "
+		log.info(INFO +"Setup complete")
 
 	def run():
 		pass

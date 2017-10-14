@@ -2,18 +2,18 @@ from logger import *
 from classes import *
 from constants import *
 from olympus import Olympus
-import uuid
 import time
 import sys
 
 class Client(process):
-	def setup(olympus, init_config):
-		self.client_id = uuid.uuid4()
+	def setup(olympus, id, init_config):
+		self.client_id = id
 		self.public_key = None
 		self.private_key = None
 		self.olympus = olympus
 		self.timeout = float(init_config[CLIENT_TIMEOUT])
-		log.info("Setup for client " + str(self.client_id) + " complete.")
+		self.INFO = "["+str(self.client_id).replace('>', "").replace('<', '')+"] "
+		log.info(self.INFO + "Setup complete")
 
 	def run():
 		generate_keys()
