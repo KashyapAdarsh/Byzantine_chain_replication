@@ -24,6 +24,7 @@ class Olympus(process):
 		self.head_timeout = init_config[HEAD_TIMEOUT]
 		self.nonhead_timeout = init_config[NONHEAD_TIMEOUT]
 		self.head = None
+		self.tail = None
 		self.no_of_replicas = (2 * float(init_config[TOLERENCE])) + 1 # 2t+1
 		self.no_of_clients = float(init_config[CLIENT_COUNT])
 		self.privateKey = None
@@ -35,7 +36,6 @@ class Olympus(process):
 
 		# Wait untill all the clients register with olympus
 		await(len(self.clients) == self.no_of_clients)
-		log.info(self.INFO + "All clients registered successfully.")
 
 	def make_new_replica():
 		config_id = uuid.uuid4()
@@ -85,7 +85,7 @@ class Olympus(process):
 	# @arg - specific signing key, that will be sent only to this replica
 
 	def make_replica_config(id, signing_key):
-		replica_config = ReplicaConfig(id, self.verify_keys, signing_key, self.clients, self.data_store, "ACTIVE")
+		replica_config = ReplicaConfig(id, self.verify_keys, signing_key, self.clients, self.data_store, ACTIVE)
 		return replica_config
 
 	# This method adds head and tail info for every replicaconfig object created.
@@ -95,9 +95,15 @@ class Olympus(process):
 	def add_head_tail(replica_index, replica_config):
 		if (replica_index == 0):
 			replica_config.is_head = True
+			self.head = self.replica_list[replica_index]
+			# If we have only one replica, then both head and tail are same
+			if (len(self.replica_list) == 1):
+				replica_config.is_tail = True
+				self.tail = self.replica_list[replica_index]
 			replica_config.next_replica_id = self.replica_list[replica_index + 1]
 		elif (replica_index == len(self.replica_list) - 1):
 			replica_config.is_tail = True
+			self.tail = self.replica_list[replica_index]
 			replica_config.prev_replica_id = self.replica_list[replica_index - 1]
 		else:
 			replica_config.next_replica_id = self.replica_list[replica_index + 1]
@@ -105,9 +111,19 @@ class Olympus(process):
 
 		return replica_config
 
+	# This method will send required details to the client
+	def send_client_config(client):
+		conf = ClientConfig(verify_keys)
+		conf.head_id = self.head
+		conf.tail_id = self.tail
+		log.info(self.INFO + "Sending replica details to client " + str(client))
+		send(("client_config", conf), to=client)
+
+
 	################### Receivers for olympus ######################
 
 	# Receiver for registering client with olympus.
 	def receive(msg=("register_client", client_id, client_key), from_=c):
 		log.info(self.INFO + "Received request to register client : " + str(client_id))
 		self.clients[client_id] = client_key
+		send_client_config(c)

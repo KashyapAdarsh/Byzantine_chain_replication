@@ -23,9 +23,29 @@ class ReplicaConfig:
 
 # Configuration object that everyclient will receive
 
-class clientConfig:
+class ClientConfig:
 	def __init__(self, replicas):
-		self.client_id = uuid.uuid4()
 		self.replicas = replicas
 		self.head_id = None
 		self.tail_id = None
+
+class Operation:
+	def __init__(self, operation_type, msg_id, data, client_id):
+		self.type = operation_type
+		self.msg_id = msg_id
+		self.data = data
+		self.client_id = client_id
+
+class Data:
+	def __init__(self, key, value):
+		self.key = key
+		self.value = value
+
+class ClientMessage:
+	def __init__(self, is_response_received, operation):
+		self.is_response_received = False
+		self.operation = operation
+
+class ResponseObject:
+	def __init__(self, msg_id):
+		self.msg_id = msg_id

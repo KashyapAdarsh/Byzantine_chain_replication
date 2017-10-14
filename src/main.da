@@ -38,9 +38,13 @@ def main():
 	def initialize_client(config, olympus, num):
 		log.info(INFO + "Initializing clients")
 		clients = new(Client, num=num)
+		client_num = 0
 		for client in clients:
-			setup(client, [olympus, client, config])
+			# Get workload for every client
+			work_load = config[WORKLOAD + "[" + str(client_num) + "]"].split(';')
+			setup(client, [olympus, client, config, work_load])
 			start(client)
+			client_num += 1
 
 	# Program starts execution from here
 
@@ -57,7 +61,7 @@ def main():
 		file = sys.argv[1]
 
 	config = read_config(file, log)
-	log.info(INFO + "Config received: " + str(config))
+	# log.info(INFO + "Config received: " + str(config))
 
 	# Initialize Olympus
 	olympus = initialize_olympus(config)
@@ -66,3 +70,5 @@ def main():
 
 	# Initialize a client
 	initialize_client(config, olympus, int(config[CLIENT_COUNT]))
+	
+	#

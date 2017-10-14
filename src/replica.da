@@ -8,15 +8,57 @@ import sys
 class Replica(process):
 
 	def setup(replica_config):
+		# ReplicaConfig object
 		self.config = replica_config
+		self.msg_cache = []
+		self.test = False
 		self.INFO = "["+str(self.config.id).replace('>', "").replace('<', '')+"] "
 		log.info(INFO +"Setup complete")
 
+	# Need to define till when replicas are up and running
+
 	def run():
-		pass
-		'''
-		if (self.config.prev_replica_id is not None):
-			log.info("My prev ID : "+ str(self.config.prev_replica_id))
-		if (self.config.next_replica_id is not None):
-			log.info("My next ID : "+ str(self.config.next_replica_id))
-		'''
+		await(self.test == True)
+
+	# This method verifies if client is valid
+
+	def is_valid_client(c):
+		if (c in self.config.clients):
+			return True
+		return False
+
+	# This method handles sending order shuttle down the chain
+	# Here we have multiple cases based on if the replica is HEAD or TAIL
+
+	def handle_transmission(operation, c):
+		if (self.config.is_head):
+			
+			opt = str(operation.type) + "("
+			if (operation.data.key != None): 
+				opt += str(operation.data.key) + " , "
+			opt += str(operation.data.value)+")"
+			
+			log.info(self.INFO + "Received operation {" +opt+ "} with msg ID "+ \
+										str(operation.msg_id))
+			send_result(c, operation.msg_id)
+		else:
+			pass
+
+	def send_result(c, msg_id):
+		send(("result", ResponseObject(msg_id)), to=c)
+
+	######### Receivers in replica ##########
+
+	def receive(msg=("perform_operation", operation), from_=c):
+		if (not is_valid_client(c) or self.config.mode != ACTIVE):
+			pass
+		
+		# We check if this request is retransmission or new request
+		if (operation.msg_id in msg_cache):
+			handle_retransmission(operation, c)
+		else:
+			handle_transmission(operation, c)
+
+
+
+

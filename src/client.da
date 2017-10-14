@@ -6,11 +6,18 @@ import time
 import sys
 import nacl.encoding
 import nacl.signing
+import uuid
 
 class Client(process):
-	def setup(olympus, id, init_config):
+	def setup(olympus, id, init_config, work_load):
 		self.client_id = id
 		self.signing_key = None
+		self.work_load = work_load
+		self.current_work_load = 0
+		self.msg_details = dict()
+		self.replica_head = None
+		self.replica_tail = None
+		self.replica_keys = None
 		self.verify_key = None
 		self.olympus = olympus
 		self.timeout = float(init_config[CLIENT_TIMEOUT])
@@ -20,11 +27,24 @@ class Client(process):
 	def run():
 		generate_keys()
 		register_with_client()
+		
+		# For various operations, we send next operation only after receiving
+		# response for current operation
+
+		for load in work_load:
+			msg_id = uuid.uuid4()
+			operation = make_operation(msg_id, load)
+			if (operation == None):
+				continue
+			send_request(operation, "new")
+			await(self.msg_details[msg_id].is_response_received == True)
 
 	# This method will register a client to olympus
 	def register_with_client():
 		verify_key_hex = generate_keys()
 		send(("register_client",self.client_id, verify_key_hex), to=self.olympus)
+		# Wait untill we recieve back data from olympus
+		await(self.replica_keys != None)
 
 	# This method generates a signing key and verification key
 	# verification key that we send to olympus is encoded before sending
@@ -34,3 +54,54 @@ class Client(process):
 		self.verify_key = self.signing_key.verify_key
 		verify_key_hex = self.verify_key.encode(encoder=nacl.encoding.HexEncoder)
 		return verify_key_hex
+
+	# This methid identifies type of operation that client has to request next
+	# and make an operation object with all necessary details like 
+	# TYPE - Get, put, append or slice
+	# and key, values for each operation
+
+	def make_operation(msg_id, opt):
+		operation = None
+		# Identify put, append or slice workloads
+		if ((PUT in opt) or (APPEND in opt) or (SLICE in opt)):
+			temp = opt[opt.index('(') + 1:opt.index(')')].split(',')
+			key = temp[0].replace("'", "").strip()
+			value = temp[1].replace("'", "").strip()
+			operation = Operation(opt[0:opt.index('(')].strip(), msg_id, \
+											Data(key, value), self.client_id)
+		# Identifies get workload
+		elif (GET in opt):
+			value = opt[opt.index('(') + 1:opt.index(')')].replace("'", "").strip()
+			operation = Operation(GET, msg_id, Data(None, value), self.client_id)
+
+		# Pseudorandom operations
+		else :
+			pass
+
+		return operation
+
+	def send_request(operation, type):
+		# Sending a new request
+		
+		# TODO need to start timer here
+		if (type == "new"):
+			log.info(self.INFO + "sending operation request to head.")
+			msg_details[operation.msg_id] = ClientMessage(False, operation)
+			send(("perform_operation", operation), to=self.replica_head)
+		else:
+			pass
+
+	######## Receivers in client #########
+
+	def receive(msg=("client_config", config)):
+		log.info(self.INFO + "Received replica details from olympus")
+		self.replica_head = config.head_id
+		self.replica_tail = config.tail_id
+		self.replica_keys = config.replicas
+
+	# Receiver for result in client.
+	# This has to verify the result and stuff
+
+	def receive(msg=("result", response), from_=r):
+		log.info(self.INFO + "Received result for msg " + str(response.msg_id))
+		msg_details[response.msg_id].is_response_received = True
