@@ -66,4 +66,3 @@ def main():
 
 	# Initialize a client
 	initialize_client(config, olympus, int(config[CLIENT_COUNT]))
-

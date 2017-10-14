@@ -18,7 +18,6 @@ def setup_custom_logger(name, config_name):
     logger.addHandler(screen_handler)
     return logger
 
-
 def set_file_name(name):
     global file_name
     file_name = (name + "_")

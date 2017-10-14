@@ -4,12 +4,14 @@ from constants import *
 from olympus import Olympus
 import time
 import sys
+import nacl.encoding
+import nacl.signing
 
 class Client(process):
 	def setup(olympus, id, init_config):
 		self.client_id = id
-		self.public_key = None
-		self.private_key = None
+		self.signing_key = None
+		self.verify_key = None
 		self.olympus = olympus
 		self.timeout = float(init_config[CLIENT_TIMEOUT])
 		self.INFO = "["+str(self.client_id).replace('>', "").replace('<', '')+"] "
@@ -19,8 +21,16 @@ class Client(process):
 		generate_keys()
 		register_with_client()
 
+	# This method will register a client to olympus
 	def register_with_client():
-		send(("register_client",self.client_id, self.public_key), to=self.olympus)
+		verify_key_hex = generate_keys()
+		send(("register_client",self.client_id, verify_key_hex), to=self.olympus)
 
+	# This method generates a signing key and verification key
+	# verification key that we send to olympus is encoded before sending
+	
 	def generate_keys():
-		pass
+		self.signing_key = nacl.signing.SigningKey.generate()
+		self.verify_key = self.signing_key.verify_key
+		verify_key_hex = self.verify_key.encode(encoder=nacl.encoding.HexEncoder)
+		return verify_key_hex
