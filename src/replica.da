@@ -14,6 +14,7 @@ class Replica(process):
 		self.msg_cache = []
 		self.test = False
 		self.history = []
+		self.result_cahce = dict()
 		self.INFO = "["+str(self.config.id).replace('>', "").replace('<', '')+"] "
 		log.info(INFO +"Setup complete")
 
@@ -76,10 +77,26 @@ class Replica(process):
 			log.info(self.INFO + "Sending result to client " + str(order_shuttle.client_id))
 			# We make a response object before sending
 			response = ResponseObject(order_shuttle.operation.msg_id, result, result_shuttle.statements)
+			# sending the result to client
 			send(("result", response), to=order_shuttle.client_id)
+
+			# Cache the result and send it back
+			result_cahce[result_shuttle.msg_id] = result_shuttle
+			send(("backward_result", result_shuttle), to=self.config.prev_replica_id)
 		else:
 			log.info(self.INFO + "Forwarding the shuttle to " + str(self.config.next_replica_id))
 			send(("order_result_shuttle", order_shuttle, result_shuttle), to=self.config.next_replica_id)
+
+
+	def send_result_backward(result_shuttle):
+		# If result shuttle is valid, then we save it in cache
+		if (verify_result(result_shuttle)):
+			result_cahce[result_shuttle.msg_id] = result_shuttle
+			log.info(self.INFO + "Result shuttle received back for msg - " + str(result_shuttle.msg_id) + ", caching the result.")
+			# We send result back till the head.
+			if (not self.config.is_head):
+				send(("backward_result", result_shuttle), to=self.config.prev_replica_id)
+
 
 	# This method will be used by the head first time to create new shuttle and
 	# forward the same to next replica.
@@ -99,7 +116,7 @@ class Replica(process):
 
 		# Result shuttle..
 		# Create a result shuttle that goes down the chain
-		result_shuttle = ResultShuttle(client)
+		result_shuttle = ResultShuttle(client, operation.msg_id)
 		# Add the first result statement
 		# TODO - Need to encrypt result
 		result_shuttle.statements.append(ResultStatement(result, operation))
@@ -142,6 +159,9 @@ class Replica(process):
 			else:
 				return self.config.data_store[operation.data.value]
 
+	def verify_result(result_shuttle):
+		return True
+
 	######### Receivers in replica ##########
 
 	# This is a receiver to receive from client. It receives an operation that
@@ -156,9 +176,16 @@ class Replica(process):
 			pass
 			#handle_retransmission(operation=operation, c, result_shuttle=None, order_shuttle=None)
 		else:
-			handle_transmission(operation=operation, receiver=c, result_shuttle=None, order_shuttle=None)
+			handle_transmission(operation=operation, receiver=c, result_shuttle=None,
+								order_shuttle=None)
 
 	# This is a receiver to receive order and result shuttle by replicas
 	def receive(msg=("order_result_shuttle", order_shuttle, result_shuttle), from_=r):
 		if (self.config.mode == ACTIVE):
-			handle_transmission(operation=None, receiver=r, result_shuttle=result_shuttle, order_shuttle=order_shuttle)
+			handle_transmission(operation=None, receiver=r, result_shuttle=result_shuttle, \
+								order_shuttle=order_shuttle)
+
+	# This is a receiver to receive result shuttle back from tail, we cache result here
+	def receive(msg=('backward_result', result_shuttle), from_=r):
+		if (self.config.mode == ACTIVE):
+			send_result_backward(result_shuttle)

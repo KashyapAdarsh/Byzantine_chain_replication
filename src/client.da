@@ -85,7 +85,8 @@ class Client(process):
 		
 		# TODO need to start timer here
 		if (type == "new"):
-			log.info(self.INFO + "sending operation request to head.")
+			log.info(self.INFO + "sending operation request to head with msgID : "\
+					+str(operation.msg_id))
 			msg_details[operation.msg_id] = ClientMessage(False, operation)
 			send(("perform_operation", operation), to=self.replica_head)
 		else:
