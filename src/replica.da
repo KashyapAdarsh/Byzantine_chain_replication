@@ -1,6 +1,7 @@
 from logger import *
 from classes import *
 from constants import *
+from util import *
 import uuid
 import time
 import sys
@@ -12,6 +13,7 @@ class Replica(process):
 		self.config = replica_config
 		self.msg_cache = []
 		self.test = False
+		self.history = []
 		self.INFO = "["+str(self.config.id).replace('>', "").replace('<', '')+"] "
 		log.info(INFO +"Setup complete")
 
@@ -30,35 +32,133 @@ class Replica(process):
 	# This method handles sending order shuttle down the chain
 	# Here we have multiple cases based on if the replica is HEAD or TAIL
 
-	def handle_transmission(operation, c):
-		if (self.config.is_head):
-			
-			opt = str(operation.type) + "("
-			if (operation.data.key != None): 
-				opt += str(operation.data.key) + " , "
-			opt += str(operation.data.value)+")"
-			
-			log.info(self.INFO + "Received operation {" +opt+ "} with msg ID "+ \
-										str(operation.msg_id))
-			send_result(c, operation.msg_id)
+	def handle_transmission(operation=None, receiver=None, result_shuttle=None, order_shuttle=None):
+		# Case when replica is a head
+		if (self.config.is_head):		
+			print_opt(operation)
+			#send_result(c, operation.msg_id)
+			send_new_shuttle(operation, receiver)
+		# For any other case
 		else:
-			pass
+			forward_shuttle(receiver, result_shuttle, order_shuttle)
 
-	def send_result(c, msg_id):
-		send(("result", ResponseObject(msg_id)), to=c)
+	# Helper to print		
+	def print_opt(operation):
+		opt = str(operation.type) + "("
+		if (operation.data.key is not None): 
+			opt += str(operation.data.key) + ","
+		opt += str(operation.data.value)+")"
+		
+		log.info(self.INFO + "Received operation {" +opt+ "}")
+
+	# This method will be used by replicas, to add its details and send the 
+	# result
+	# We have 2 cases : 
+	#	1) If tail, send result to client
+	#	2) If not tail, just add current result and forward it.
+
+	def forward_shuttle(replica, result_shuttle, order_shuttle):
+		operation = order_shuttle.operation
+		slot =  order_shuttle.slot
+		log.info(self.INFO + "Received shuttle from "+ str(replica))
+
+		self.msg_cache.append(operation.msg_id)
+		# Execute the necessary operations
+		result = execute_operation(operation)
+		order_shuttle.order_statement.append(OrderStatement(slot, operation, self.config.id))
+		result_shuttle.statements.append(ResultStatement(result, operation))
+		# add order shuttle to current replicas history
+		history.append(order_shuttle)
+
+		# We have to send result to client and start result shuttle message
+		# backwards if it is a tail, else just forward the shuttle.
+		if (self.config.is_tail):
+			log.info(self.INFO + "Sending result to client " + str(order_shuttle.client_id))
+			# We make a response object before sending
+			response = ResponseObject(order_shuttle.operation.msg_id, result, result_shuttle.statements)
+			send(("result", response), to=order_shuttle.client_id)
+		else:
+			log.info(self.INFO + "Forwarding the shuttle to " + str(self.config.next_replica_id))
+			send(("order_result_shuttle", order_shuttle, result_shuttle), to=self.config.next_replica_id)
+
+	# This method will be used by the head first time to create new shuttle and
+	# forward the same to next replica.
+
+	def send_new_shuttle(operation, client):
+		slot = get_next_slot()
+		self.msg_cache.append(operation.msg_id)
+
+		# Execute the necessary operations
+		result = execute_operation(operation)
+
+		# Order shuttle..
+		# Create order shuttle that goes down the chain
+		order_shuttle =  OrderShuttle(slot, operation, client)
+		# Add the first order statement
+		order_shuttle.order_statement.append(OrderStatement(slot, operation, self.config.id))
+
+		# Result shuttle..
+		# Create a result shuttle that goes down the chain
+		result_shuttle = ResultShuttle(client)
+		# Add the first result statement
+		# TODO - Need to encrypt result
+		result_shuttle.statements.append(ResultStatement(result, operation))
+
+		# add order shuttle to current replicas history
+		history.append(order_shuttle)
+
+		# Same send will be used for both order and result shuttle down the chain
+		log.info(self.INFO + "Forwarding the shuttle to " + str(self.config.next_replica_id))
+		send(("order_result_shuttle", order_shuttle, result_shuttle), to=self.config.next_replica_id)
+
+
+	# This method executes the operation on the datastore
+	def execute_operation(operation):
+		if (operation.type == PUT):
+			self.config.data_store[operation.data.key] = [operation.data.value]
+			return OK
+
+		elif (operation.type == APPEND):
+			if (operation.data.key in self.config.data_store):
+				self.config.data_store[operation.data.key].append(operation.data.value)
+				return OK
+			return FAIL
+
+		elif (operation.type == SLICE):
+			start = int(operation.data.value.split(":")[0])
+			end = int(operation.data.value.split(":")[1])
+
+			if (operation.data.key not in self.config.data_store or start < 0 \
+									or end > len(self.config.data_store)):
+				return FAIL
+			else:
+				self.config.data_store[operation.data.key] = \
+						self.config.data_store[operation.data.key][start : end]
+				return OK
+
+		elif (operation.type == GET):
+			if (operation.data.value not in self.config.data_store):
+				return NOT_PRESENT
+			else:
+				return self.config.data_store[operation.data.value]
 
 	######### Receivers in replica ##########
 
+	# This is a receiver to receive from client. It receives an operation that
+	# We need to perform.
+	# This is used only by head
 	def receive(msg=("perform_operation", operation), from_=c):
 		if (not is_valid_client(c) or self.config.mode != ACTIVE):
 			pass
 		
 		# We check if this request is retransmission or new request
 		if (operation.msg_id in msg_cache):
-			handle_retransmission(operation, c)
+			pass
+			#handle_retransmission(operation=operation, c, result_shuttle=None, order_shuttle=None)
 		else:
-			handle_transmission(operation, c)
+			handle_transmission(operation=operation, receiver=c, result_shuttle=None, order_shuttle=None)
 
-
-
-
+	# This is a receiver to receive order and result shuttle by replicas
+	def receive(msg=("order_result_shuttle", order_shuttle, result_shuttle), from_=r):
+		if (self.config.mode == ACTIVE):
+			handle_transmission(operation=None, receiver=r, result_shuttle=result_shuttle, order_shuttle=order_shuttle)

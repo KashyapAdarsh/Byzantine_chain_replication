@@ -1,0 +1,7 @@
+
+slot_number = 0
+
+def get_next_slot():
+	global slot_number
+	slot_number += 1
+	return slot_number

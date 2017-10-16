@@ -103,5 +103,6 @@ class Client(process):
 	# This has to verify the result and stuff
 
 	def receive(msg=("result", response), from_=r):
-		log.info(self.INFO + "Received result for msg " + str(response.msg_id))
+		log.info(self.INFO + "Received result for msg " + str(response.msg_id) \
+												+ " : " + str(response.result))
 		msg_details[response.msg_id].is_response_received = True

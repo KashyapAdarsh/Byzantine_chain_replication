@@ -47,5 +47,30 @@ class ClientMessage:
 		self.operation = operation
 
 class ResponseObject:
-	def __init__(self, msg_id):
+	def __init__(self, msg_id, result, proof):
 		self.msg_id = msg_id
+		self.result = result
+		self.result_proof = proof
+
+class OrderShuttle:
+	def __init__(self, slot, operation, client):
+		self.slot = slot
+		self.operation = operation
+		self.order_statement = []
+		self.client_id = client
+
+class OrderStatement:
+	def __init__(self, slot, operation, id):
+		self.slot = slot
+		self.operation = operation
+		self.replica_id = id
+
+class ResultShuttle:
+	def __init__(self, client):
+		self.client_id = client
+		self.statements = []
+
+class ResultStatement:
+	def __init__(self, result, operation):
+		self.operation = operation
+		self.result = result

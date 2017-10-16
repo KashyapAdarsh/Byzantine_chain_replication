@@ -21,3 +21,6 @@ APPEND = "append"
 # Constants for modes used by replicas
 
 ACTIVE = "active"
+OK = "OK"
+FAIL = "FAIL"
+NOT_PRESENT = ""
