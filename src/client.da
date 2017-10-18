@@ -104,13 +104,16 @@ class Client(process):
 
 			# We wait untill all replicas send the result
 			# TODO :  If we receive result from all then we need to verify
-			if(await(len(self.retransmit_result) == len(self.replica_keys))):
-				log.info(self.INFO + "Received retransmission result from all replicas")
+			if(await(len(self.retransmit_result) > 0)):
+				log.info(self.INFO + "Received a succesfull retransmission result from " + \
+													str(list(self.retransmit_result.keys())[0]))
 				self.msg_details[operation.msg_id].is_response_received == True
+				# Better to print result after verification
 				verify_result()
 			elif (timeout(self.timeout)):
-				log.info(self.INFO + "TIMEOUT")
-				send_request(operation, "retransmission")
+				log.info(self.INFO + "Retransmission timed out, we did not receive any successful \
+													result. sending reconfig request to olympus")
+				#send_request(operation, "retransmission")
 
 	def verify_result():
 		pass
@@ -121,7 +124,7 @@ class Client(process):
 		for replica, val in self.replica_keys.items():
 			log.info(self.INFO + "sending retransmission request to replica " +str(replica)+" for msgID : "\
 					+str(operation.msg_id))
-			send(("operation",operation, None, None), to=replica)
+			send(("retransmit_operation",operation, None, None), to=replica)
 			self.retransmit_result = dict()
 
 	######## Receivers in client #########
@@ -145,4 +148,8 @@ class Client(process):
 		else :
 			log.info(self.INFO + "Received result for retransmission of " + \
 				str(response.msg_id) + " from : " + str(r))
-			self.retransmit_result[r] = response
+			# We will add result to dict only if it is success, if we receive success result 
+			# from alteast one replica, then we are good
+
+			if (response.result == SUCCESS):
+				self.retransmit_result[r] = response

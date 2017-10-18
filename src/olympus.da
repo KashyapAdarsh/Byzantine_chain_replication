@@ -60,6 +60,12 @@ class Olympus(process):
 				replica_config = make_replica_config(replica_list[index], \
 											signing_keys[replica_list[index]])
 				replica_config = add_head_tail(index, replica_config)
+				
+				# Add some details to replica config
+				replica_config.head_id = self.replica_list[0]
+				replica_config.head_timeout = self.head_timeout
+				replica_config.nonhead_timeout = self.nonhead_timeout
+
 				setup(self.replica_list[index],[replica_config])
 				start(self.replica_list[index])
 		else:

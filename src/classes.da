@@ -16,6 +16,8 @@ class ReplicaConfig:
 		self.prev_replica_id = None
 		self.next_replica_id = None
 		self.clients = clients
+		self.head_timeout = None
+		self.nonhead_timeout = None
 		self.is_head = False
 		self.is_tail = False
 		self.data_store = data_store
