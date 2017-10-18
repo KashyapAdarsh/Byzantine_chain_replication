@@ -20,6 +20,7 @@ class Client(process):
 		self.replica_keys = None
 		self.verify_key = None
 		self.olympus = olympus
+		self.retransmit_result = dict()
 		self.timeout = float(init_config[CLIENT_TIMEOUT])
 		self.INFO = "["+str(self.client_id).replace('>', "").replace('<', '')+"] "
 		log.info(self.INFO + "Setup complete")
@@ -37,7 +38,6 @@ class Client(process):
 			if (operation == None):
 				continue
 			send_request(operation, "new")
-			await(self.msg_details[msg_id].is_response_received == True)
 
 	# This method will register a client to olympus
 	def register_with_client():
@@ -55,7 +55,7 @@ class Client(process):
 		verify_key_hex = self.verify_key.encode(encoder=nacl.encoding.HexEncoder)
 		return verify_key_hex
 
-	# This methid identifies type of operation that client has to request next
+	# This method identifies type of operation that client has to request next
 	# and make an operation object with all necessary details like 
 	# TYPE - Get, put, append or slice
 	# and key, values for each operation
@@ -80,17 +80,49 @@ class Client(process):
 
 		return operation
 
+	# This method sends request for the first time or if timesout
+	# then it sends retransmission request as well.
+
 	def send_request(operation, type):
 		# Sending a new request
-		
-		# TODO need to start timer here
+
 		if (type == "new"):
 			log.info(self.INFO + "sending operation request to head with msgID : "\
 					+str(operation.msg_id))
 			msg_details[operation.msg_id] = ClientMessage(False, operation)
-			send(("perform_operation", operation), to=self.replica_head)
+			send(("operation", operation, None, None), to=self.replica_head)
+			
+			if(await(self.msg_details[operation.msg_id].is_response_received == True)):
+				continue
+			elif (timeout(self.timeout)):
+				log.info(self.INFO + "TIMEOUT")
+				send_request(operation, "retransmission")
 		else:
-			pass
+			self.msg_details[operation.msg_id].is_retransmited = True
+			# Need to broadcast instead here
+			broadcast_request(operation)
+
+			# We wait untill all replicas send the result
+			# TODO :  If we receive result from all then we need to verify
+			if(await(len(self.retransmit_result) == len(self.replica_keys))):
+				log.info(self.INFO + "Received retransmission result from all replicas")
+				self.msg_details[operation.msg_id].is_response_received == True
+				verify_result()
+			elif (timeout(self.timeout)):
+				log.info(self.INFO + "TIMEOUT")
+				send_request(operation, "retransmission")
+
+	def verify_result():
+		pass
+
+
+	def broadcast_request(operation):
+		# This will broadcast the retransmission to all replicas
+		for replica, val in self.replica_keys.items():
+			log.info(self.INFO + "sending retransmission request to replica " +str(replica)+" for msgID : "\
+					+str(operation.msg_id))
+			send(("operation",operation, None, None), to=replica)
+			self.retransmit_result = dict()
 
 	######## Receivers in client #########
 
@@ -104,6 +136,13 @@ class Client(process):
 	# This has to verify the result and stuff
 
 	def receive(msg=("result", response), from_=r):
-		log.info(self.INFO + "Received result for msg " + str(response.msg_id) \
-												+ " : " + str(response.result))
-		msg_details[response.msg_id].is_response_received = True
+		# This receives results when it is normal
+		if (self.msg_details[response.msg_id].is_retransmited == False):
+			log.info(self.INFO + "Received result for msg " + str(response.msg_id) \
+													+ " : " + str(response.result))
+			msg_details[response.msg_id].is_response_received = True
+		# This receives the result through retransmit
+		else :
+			log.info(self.INFO + "Received result for retransmission of " + \
+				str(response.msg_id) + " from : " + str(r))
+			self.retransmit_result[r] = response

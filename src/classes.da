@@ -45,6 +45,7 @@ class ClientMessage:
 	def __init__(self, is_response_received, operation):
 		self.is_response_received = False
 		self.operation = operation
+		self.is_retransmited = False
 
 class ResponseObject:
 	def __init__(self, msg_id, result, proof):
