@@ -27,3 +27,13 @@ FAIL = "FAIL"
 NOT_PRESENT = ""
 SUCCESS = "success"
 ERROR = "error"
+
+# constants used for error injection
+CLIENT_REQUEST = "client_request"
+FORWARDED_REQUEST = "forwarded_request"
+SHUTTLE = "shuttle"
+RESULT_SHUTTLE = "result_shuttle"
+
+CHANGE_OPT = "change_operation"
+CHANGE_RES = "change_result"
+DROP = "drop_result_stmt"

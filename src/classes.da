@@ -8,7 +8,7 @@ class data:
 # intial configurations that every replica will receive
 
 class ReplicaConfig:
-	def __init__(self, id, replica_keys, signing_key, clients, data_store, mode, replica_list):
+	def __init__(self, id, replica_keys, signing_key, data_store, mode, replica_list):
 		self.id = id
 		self.head_id = None
 		self.signing_key = signing_key
@@ -16,7 +16,7 @@ class ReplicaConfig:
 		self.replica_list = replica_list
 		self.prev_replica_id = None
 		self.next_replica_id = None
-		self.clients = clients
+		self.clients = None
 		self.head_timeout = None
 		self.nonhead_timeout = None
 		self.is_head = False
@@ -81,3 +81,10 @@ class ResultStatement:
 	def __init__(self, result, operation):
 		self.operation = operation
 		self.result = result
+
+class FailureConfig:
+	def __init__(self, client, msg_count, shuttle_type, opt):
+		self.client_id = client
+		self.msg_count = msg_count
+		self.shuttle_type = shuttle_type
+		self.opt_type = opt

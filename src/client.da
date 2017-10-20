@@ -34,6 +34,10 @@ class Client(process):
 		# For various operations, we send next operation only after receiving
 		# response for current operation
 
+		# We sleep for small time so that olympus can share client details to
+		# everyone by then.
+		time.sleep(2)
+
 		for load in work_load:
 			msg_id = uuid.uuid4()
 			operation = make_operation(msg_id, load)

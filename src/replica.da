@@ -15,6 +15,10 @@ class Replica(process):
 	def setup(replica_config):
 		# ReplicaConfig object
 		self.config = replica_config
+		self.client_counts = dict() # <client_id, msg_count>
+		self.shuttle_count = 0	
+		self.result_shuttle_count = 0
+		self.failure_config = None
 		self.msg_cache = dict()
 		self.test = False
 		self.history = []
@@ -27,6 +31,11 @@ class Replica(process):
 
 	def run():
 		await(self.test == True)
+
+	def init_counts():
+		# Adds count 0 for all clients
+		for key in list(self.config.clients.keys()):
+			self.client_counts[key] = 0
 
 	# This method verifies if client is valid
 
@@ -133,6 +142,55 @@ class Replica(process):
 
 		return False
 
+	# This is the main method that checks if it is the right time to trigger
+	# a failure.
+	def is_failure_condition_satisfied():
+		log.info(self.INFO + "checking if failure injection criteria is satisfied")
+		if (self.failure_config.shuttle_type == CLIENT_REQUEST):
+			if (self.client_counts[self.failure_config.client_id] == self.failure_config.msg_count):
+				return True
+			return False
+		else:
+			pass
+
+	# This method is the heart of failure injection, it does the following:
+	# 1) Identifies the type of injection to be performed
+	# 2) Since statements are signed, we need to decrypt them
+	# 3) Add dummy operation to the respective position of the statement
+	# 4) Above is repeated for both order and result shuttle
+
+	def perform_failure_injection(order_shuttle, result_shuttle, index):
+		log.info(self.INFO + "Performing failure injection - " + self.failure_config.opt_type)
+		
+		# Here lets change the statement of index that is sent below in both order and result shuttle
+		if (self.failure_config.opt_type == CHANGE_OPT):
+			
+			# Decrypting the order statement first
+			verify_key = nacl.signing.VerifyKey(self.config.replica_keys[self.config.replica_list[index]], \
+												encoder=nacl.encoding.HexEncoder)
+			res = pickle.loads(verify_key.verify(order_shuttle.statements[index]))
+
+			# creating a wrong operation object
+			operation = Operation(GET, res.operation.msg_id, Data(None, 'X'), res.operation.client_id)
+
+			# Modifying original order statement of this replica to something wrong
+			order_shuttle.statements[index] = sign_statement(OrderStatement(res.slot, \
+														operation, self.config.id))
+			# Decrypting the result statement first
+			res = pickle.loads(verify_key.verify(result_shuttle.statements[index]))
+
+			# Modifying original result statement of this replica to something wrong
+			result_shuttle.statements[index] = sign_statement(ResultStatement(operation, res.result))
+
+		elif (self.failure_config.opt_type == DROP):
+			pass
+		elif (self.failure_config.opt_type == CHANGE_RES):
+			pass
+		else:
+			log.info(self.INFO + "Failure injection operation not recognized")
+
+		return order_shuttle, result_shuttle
+
 	# This method will be used by replicas, to add its details and send the 
 	# result
 	# We have 2 cases : 
@@ -159,7 +217,7 @@ class Replica(process):
 														operation, self.config.id)))
 		
 		if (verify_shuttle(result_shuttle, "result_proof") == False):
-			log.info(self.INFO + "Order shuttle verification failed, we need to ask olympus to reconfigure")
+			log.info(self.INFO + "Result shuttle verification failed, we need to ask olympus to reconfigure")
 			return
 
 		result_shuttle.statements.append(sign_statement(ResultStatement(hash(result), \
@@ -189,7 +247,7 @@ class Replica(process):
 				self.msg_cache[result_shuttle.msg_id].stop()
 				response = ResponseObject(result_shuttle.msg_id, SUCCESS, result_shuttle)
 
-			# send(("result", response), to=order_shuttle.client_id)
+			send(("result", response), to=order_shuttle.client_id)
 			# send result shuttle back
 			send(("backward_result", result_shuttle), to=self.config.prev_replica_id)
 		else:
@@ -244,6 +302,12 @@ class Replica(process):
 		# TODO - Need to encrypt result
 		result_shuttle.statements.append(sign_statement(ResultStatement(hash(result), \
 													operation)))
+
+		# This checks if we are supposed to inject some failure before sending 
+		# the shuttle ahead
+		if (self.failure_config is not None and is_failure_condition_satisfied()):
+			log.info(self.INFO + "Failure Injection condition satisfied.")
+			order_shuttle, result_shuttle = perform_failure_injection(order_shuttle, result_shuttle, 0)
 
 		# add order shuttle to current replicas history
 		history.append(order_shuttle)
@@ -306,6 +370,8 @@ class Replica(process):
 		if (operation == None):
 			opt = order_shuttle.operation
 		else:
+			# If we receive operation object then it is coming from client
+			self.client_counts[sender] += 1
 			opt = operation
 
 		if (self.config.mode == ACTIVE):
@@ -344,3 +410,21 @@ class Replica(process):
 				send(("result", response), to=result_shuttle.client_id)
 
 			send_result_backward(result_shuttle)
+
+	# This receives failure config if this replica is supposed to inject anything
+	def receive(msg=('failure_config', failure_config), from_=o):
+		log.info(self.INFO + "Received failure config from olympus")
+		log.info(self.INFO + "Failure config : client id-" + str(failure_config.client_id) + \
+				", msg_count-" + str(failure_config.msg_count) + ", type-" + \
+				failure_config.shuttle_type +", operation-" + \
+				failure_config.opt_type)
+
+		self.failure_config = failure_config
+
+	# This receives client details from olympus, we need this because we start
+	# replicas before all clients register
+
+	def receive(msg=('client_details', client_info), from_=o):
+		log.info(self.INFO + "Received client information")
+		self.config.clients = client_info
+		init_counts()
