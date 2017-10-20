@@ -21,6 +21,7 @@ APPEND = "append"
 # Constants for modes used by replicas
 
 ACTIVE = "active"
+IMMUTABLE = "immutable"
 OK = "OK"
 FAIL = "FAIL"
 NOT_PRESENT = ""

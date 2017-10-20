@@ -91,7 +91,7 @@ class Olympus(process):
 	# @arg - specific signing key, that will be sent only to this replica
 
 	def make_replica_config(id, signing_key):
-		replica_config = ReplicaConfig(id, self.verify_keys, signing_key, self.clients, self.data_store, ACTIVE)
+		replica_config = ReplicaConfig(id, self.verify_keys, signing_key, self.clients, self.data_store, ACTIVE, self.replica_list)
 		return replica_config
 
 	# This method adds head and tail info for every replicaconfig object created.
@@ -100,14 +100,17 @@ class Olympus(process):
 
 	def add_head_tail(replica_index, replica_config):
 		if (replica_index == 0):
+			log.info(self.INFO + "Head is " + str(replica_list[replica_index]))
 			replica_config.is_head = True
 			self.head = self.replica_list[replica_index]
 			# If we have only one replica, then both head and tail are same
 			if (len(self.replica_list) == 1):
+				log.info(self.INFO + "Tail is " + str(replica_list[replica_index]))
 				replica_config.is_tail = True
 				self.tail = self.replica_list[replica_index]
 			replica_config.next_replica_id = self.replica_list[replica_index + 1]
 		elif (replica_index == len(self.replica_list) - 1):
+			log.info(self.INFO + "Tail is " + str(replica_list[replica_index]))
 			replica_config.is_tail = True
 			self.tail = self.replica_list[replica_index]
 			replica_config.prev_replica_id = self.replica_list[replica_index - 1]
@@ -119,7 +122,7 @@ class Olympus(process):
 
 	# This method will send required details to the client
 	def send_client_config(client):
-		conf = ClientConfig(verify_keys)
+		conf = ClientConfig(self.verify_keys, self.replica_list)
 		conf.head_id = self.head
 		conf.tail_id = self.tail
 		log.info(self.INFO + "Sending replica details to client " + str(client))

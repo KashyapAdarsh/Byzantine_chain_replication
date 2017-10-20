@@ -8,11 +8,12 @@ class data:
 # intial configurations that every replica will receive
 
 class ReplicaConfig:
-	def __init__(self, id, replica_keys, signing_key, clients, data_store, mode):
+	def __init__(self, id, replica_keys, signing_key, clients, data_store, mode, replica_list):
 		self.id = id
 		self.head_id = None
 		self.signing_key = signing_key
 		self.replica_keys = replica_keys
+		self.replica_list = replica_list
 		self.prev_replica_id = None
 		self.next_replica_id = None
 		self.clients = clients
@@ -26,8 +27,9 @@ class ReplicaConfig:
 # Configuration object that everyclient will receive
 
 class ClientConfig:
-	def __init__(self, replicas):
+	def __init__(self, replicas, replica_list):
 		self.replicas = replicas
+		self.replica_list = replica_list
 		self.head_id = None
 		self.tail_id = None
 
@@ -59,7 +61,7 @@ class OrderShuttle:
 	def __init__(self, slot, operation, client):
 		self.slot = slot
 		self.operation = operation
-		self.order_statement = []
+		self.statements = []
 		self.client_id = client
 
 class OrderStatement:

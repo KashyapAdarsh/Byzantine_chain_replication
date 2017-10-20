@@ -3,6 +3,8 @@ from classes import *
 from constants import *
 from timer import CustomTimer
 from util import *
+import nacl.encoding
+import nacl.hash
 import pickle
 import uuid
 import time
@@ -17,6 +19,7 @@ class Replica(process):
 		self.test = False
 		self.history = []
 		self.result_cache = dict()
+		self.HASHER = nacl.hash.sha256
 		self.INFO = "["+str(self.config.id).replace('>', "").replace('<', '')+"] "
 		log.info(INFO +"Setup complete")
 
@@ -65,8 +68,9 @@ class Replica(process):
 	def timer_callback(id, operation):
 		log.info(self.INFO +  "TIME OUT for replica " + str(id) + ", requesting olympus to reconfigure")
 		# TODO - RECONFIGURE
+		self.config.mode = IMMUTABLE
+		log.info(self.INFO + "Mode changed to immutable")
 		msg_cache[operation.msg_id].stop()
-
 
 	# This method handles sending order shuttle down the chain
 	# Here we have multiple cases based on if the replica is HEAD or TAIL
@@ -90,10 +94,48 @@ class Replica(process):
 		log.info(self.INFO + "Received operation {" +opt+ "}" + " with msg id " +\
 				str(operation.msg_id))
 
+	# This method is used to verify the order proof before forwarding the shuttle
+	# This is a common verification method for both result and order shuttle, 
+	# it could be optimized
+
+	def verify_shuttle(shuttle, shuttle_type):
+		log.info(self.INFO + "Verifying " + shuttle_type)
+		index = 0
+		prev_res = None
+		slot_or_res = []
+
+		for statement in shuttle.statements:
+			verify_key = nacl.signing.VerifyKey(self.config.replica_keys[self.config.replica_list[index]], \
+												encoder=nacl.encoding.HexEncoder)
+			index += 1
+			res = pickle.loads(verify_key.verify(statement))
+
+			if (prev_res is not None and (prev_res.operation.type != res.operation.type or \
+				prev_res.operation.data.key != res.operation.data.key or \
+				prev_res.operation.data.value != res.operation.data.value or \
+				prev_res.operation.msg_id != res.operation.msg_id or \
+				prev_res.operation.client_id != res.operation.client_id)):
+				return False
+
+			if (shuttle_type == "order_proof"):
+				slot_or_res.append(res.slot)
+			else:
+				slot_or_res.append(res.result)
+
+			prev_res = res
+
+		# Slot has to be same for everyone if it is order proof or else
+		# hash of result has to be same if it is res shuttle
+		if (len(set(slot_or_res)) == 1):
+			log.info(self.INFO + "Verification of "+ shuttle_type+" succesful")
+			return True
+
+		return False
+
 	# This method will be used by replicas, to add its details and send the 
 	# result
 	# We have 2 cases : 
-	#	1) If tail, send result to client
+	#	1) If tail, send result to client and send result shuttle backwards
 	#	2) If not tail, just add current result and forward it.
 
 	def forward_shuttle(replica, result_shuttle, order_shuttle):
@@ -108,11 +150,18 @@ class Replica(process):
 		# Execute the necessary operations
 		result = execute_operation(operation)
 
-		# TODO : Need to verify order statements and result statements here
+		if (verify_shuttle(order_shuttle, "order_proof") == False):
+			log.info(self.INFO + "Order shuttle verification failed, we need to ask olympus to reconfigure")
+			return
 
-		order_shuttle.order_statement.append(sign_statement(OrderStatement(slot, \
+		order_shuttle.statements.append(sign_statement(OrderStatement(slot, \
 														operation, self.config.id)))
-		result_shuttle.statements.append(sign_statement(ResultStatement(result, \
+		
+		if (verify_shuttle(result_shuttle, "result_proof") == False):
+			log.info(self.INFO + "Order shuttle verification failed, we need to ask olympus to reconfigure")
+			return
+
+		result_shuttle.statements.append(sign_statement(ResultStatement(hash(result), \
 														operation)))
 		# add order shuttle to current replicas history
 		history.append(order_shuttle)
@@ -136,7 +185,7 @@ class Replica(process):
 				self.msg_cache[result_shuttle.msg_id].stop()
 				response = ResponseObject(result_shuttle.msg_id, SUCCESS, result_shuttle)
 
-			# send(("result", response), to=order_shuttle.client_id)
+			send(("result", response), to=order_shuttle.client_id)
 			# send result shuttle back
 			send(("backward_result", result_shuttle), to=self.config.prev_replica_id)
 		else:
@@ -146,16 +195,23 @@ class Replica(process):
 
 	def send_result_backward(result_shuttle):
 		# If result shuttle is valid, then we save it in cache
-		if (verify_result(result_shuttle)):
+		if (verify_shuttle(result_shuttle, "result_proof_reverse_direction") == True):
 			result_cache[result_shuttle.msg_id] = result_shuttle.statements
 			log.info(self.INFO + "Result shuttle received for msg - " + str(result_shuttle.msg_id) + ", caching the result.")
 			# We send result back till the head.
 			if (not self.config.is_head):
 				send(("backward_result", result_shuttle), to=self.config.prev_replica_id)
+		else:
+			log.info(self.INFO + "Result shuttle verification failed.")
+
 
 	def sign_statement(statement):
 		#return statement
 		return self.config.signing_key.sign(pickle.dumps(statement))
+
+	def hash(result):
+		digest = HASHER(pickle.dumps(result), encoder=nacl.encoding.HexEncoder)
+		return digest
 
 	# This method will be used by the head first time to create new shuttle and
 	# forward the same to next replica.
@@ -174,7 +230,7 @@ class Replica(process):
 		# Create order shuttle that goes down the chain
 		order_shuttle =  OrderShuttle(slot, operation, client)
 		# Add the first order statement
-		order_shuttle.order_statement.append(sign_statement(OrderStatement(slot, \
+		order_shuttle.statements.append(sign_statement(OrderStatement(slot, \
 													operation, self.config.id)))
 
 		# Result shuttle..
@@ -182,7 +238,7 @@ class Replica(process):
 		result_shuttle = ResultShuttle(client, operation.msg_id)
 		# Add the first result statement
 		# TODO - Need to encrypt result
-		result_shuttle.statements.append(sign_statement(ResultStatement(result, \
+		result_shuttle.statements.append(sign_statement(ResultStatement(hash(result), \
 													operation)))
 
 		# add order shuttle to current replicas history

@@ -4,6 +4,7 @@ from constants import *
 from olympus import Olympus
 import time
 import sys
+import pickle
 import nacl.encoding
 import nacl.signing
 import uuid
@@ -19,6 +20,7 @@ class Client(process):
 		self.replica_tail = None
 		self.replica_keys = None
 		self.verify_key = None
+		self.replica_list = None
 		self.olympus = olympus
 		self.retransmit_result = dict()
 		self.timeout = float(init_config[CLIENT_TIMEOUT])
@@ -109,15 +111,39 @@ class Client(process):
 													str(list(self.retransmit_result.keys())[0]))
 				self.msg_details[operation.msg_id].is_response_received == True
 				# Better to print result after verification
-				verify_result()
+				if (verify_result(response) == False):
+					log.info(self.INFO + "Result verification failed, need to reconfigure")
+					return
 			elif (timeout(self.timeout)):
 				log.info(self.INFO + "Retransmission timed out, we did not receive any successful \
 													result. sending reconfig request to olympus")
 				#send_request(operation, "retransmission")
 
-	def verify_result():
-		pass
+	# This method is used by client to verify the results received.
+	
+	def verify_result(response):
+		log.info(self.INFO + "Verifying result.")
+		index = 0
+		prev_res = None
 
+		for statement in response.result_proof:
+			verify_key = nacl.signing.VerifyKey(self.replica_keys[self.replica_list[index]], \
+												encoder=nacl.encoding.HexEncoder)
+			index += 1
+			res = pickle.loads(verify_key.verify(statement))
+
+			if (prev_res is not None and (prev_res.operation.type != res.operation.type or \
+				prev_res.operation.data.key != res.operation.data.key or \
+				prev_res.operation.data.value != res.operation.data.value or \
+				prev_res.operation.msg_id != res.operation.msg_id or \
+				prev_res.operation.client_id != res.operation.client_id or \
+				prev_res.result != res.result)):
+				return False
+
+			prev_res = res
+
+		log.info(self.INFO + "Verification of result succesful.")
+		return True
 
 	def broadcast_request(operation):
 		# This will broadcast the retransmission to all replicas
@@ -134,6 +160,7 @@ class Client(process):
 		self.replica_head = config.head_id
 		self.replica_tail = config.tail_id
 		self.replica_keys = config.replicas
+		self.replica_list = config.replica_list
 
 	# Receiver for result in client.
 	# This has to verify the result and stuff
@@ -141,8 +168,14 @@ class Client(process):
 	def receive(msg=("result", response), from_=r):
 		# This receives results when it is normal
 		if (self.msg_details[response.msg_id].is_retransmited == False):
-			log.info(self.INFO + "Received result for msg " + str(response.msg_id) \
-													+ " : " + str(response.result))
+			log.info(self.INFO + "Received result for msg " + str(response.msg_id))
+
+			if(verify_result(response) == False):
+				log.info(self.INFO + "Result verification failed, asking olympus to reconfigure")
+				return
+
+			log.info(self.INFO + "Result verified for msg "+ str(response.msg_id) + \
+					" and the result is : " + str(response.result))
 			msg_details[response.msg_id].is_response_received = True
 		# This receives the result through retransmit
 		else :
