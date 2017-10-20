@@ -43,7 +43,8 @@ class Replica(process):
 		# Case1 - result is cached
 		if (operation.msg_id in result_cache):
 			log.info(self.INFO + "Result for " + str(operation.msg_id) + " is saved, sending to client")
-			response = ResponseObject(operation.msg_id, SUCCESS, self.result_cache[operation.msg_id])
+			response = ResponseObject(operation.msg_id, self.result_cache[operation.msg_id].result, self.result_cache[operation.msg_id].statements)
+
 			send(("result", response), to=sender)
 
 		# Case2 - All other cases we will send request to head
@@ -163,6 +164,9 @@ class Replica(process):
 
 		result_shuttle.statements.append(sign_statement(ResultStatement(hash(result), \
 														operation)))
+		# Unhashed result
+		result_shuttle.result = result
+
 		# add order shuttle to current replicas history
 		history.append(order_shuttle)
 
@@ -174,7 +178,7 @@ class Replica(process):
 			response = ResponseObject(order_shuttle.operation.msg_id, result, result_shuttle.statements)
 
 			# Cache the result and send it back
-			result_cache[result_shuttle.msg_id] = result_shuttle.statements
+			result_cache[result_shuttle.msg_id] = result_shuttle
 
 			# When result shuttle reached tail, if we have started timer then we send 
 			# result to client and stop timer
@@ -185,7 +189,7 @@ class Replica(process):
 				self.msg_cache[result_shuttle.msg_id].stop()
 				response = ResponseObject(result_shuttle.msg_id, SUCCESS, result_shuttle)
 
-			send(("result", response), to=order_shuttle.client_id)
+			# send(("result", response), to=order_shuttle.client_id)
 			# send result shuttle back
 			send(("backward_result", result_shuttle), to=self.config.prev_replica_id)
 		else:
@@ -196,7 +200,7 @@ class Replica(process):
 	def send_result_backward(result_shuttle):
 		# If result shuttle is valid, then we save it in cache
 		if (verify_shuttle(result_shuttle, "result_proof_reverse_direction") == True):
-			result_cache[result_shuttle.msg_id] = result_shuttle.statements
+			result_cache[result_shuttle.msg_id] = result_shuttle
 			log.info(self.INFO + "Result shuttle received for msg - " + str(result_shuttle.msg_id) + ", caching the result.")
 			# We send result back till the head.
 			if (not self.config.is_head):
@@ -235,7 +239,7 @@ class Replica(process):
 
 		# Result shuttle..
 		# Create a result shuttle that goes down the chain
-		result_shuttle = ResultShuttle(client, operation.msg_id)
+		result_shuttle = ResultShuttle(client, operation.msg_id, result)
 		# Add the first result statement
 		# TODO - Need to encrypt result
 		result_shuttle.statements.append(sign_statement(ResultStatement(hash(result), \
@@ -321,8 +325,9 @@ class Replica(process):
 			handle_retransmission(operation=operation, sender=sender, result_shuttle=result_shuttle, \
 									order_shuttle=order_shuttle)
 		else:
-			pass
-			# Need to send error statement to client directly
+			# Sending None as result, which basically means error here
+			response = ResponseObject(operation.msg_id, ERROR, None)
+			send(("result", response), to=sender)
 
 
 	# This is a receiver to receive result shuttle back from tail, we cache result here
@@ -339,7 +344,3 @@ class Replica(process):
 				send(("result", response), to=result_shuttle.client_id)
 
 			send_result_backward(result_shuttle)
-
-# TODO FOR TOM : 
-
-# re transmission has to be handled by starting timers and stuff for replicas.

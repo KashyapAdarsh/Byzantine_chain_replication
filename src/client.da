@@ -111,16 +111,17 @@ class Client(process):
 													str(list(self.retransmit_result.keys())[0]))
 				self.msg_details[operation.msg_id].is_response_received == True
 				# Better to print result after verification
-				if (verify_result(response) == False):
+				if (verify_result(self.retransmit_result[list(self.retransmit_result.keys())[0]]) is False):
 					log.info(self.INFO + "Result verification failed, need to reconfigure")
 					return
+				else:
+					log.info(self.INFO + "Retransmission result : " + str(self.retransmit_result[list(self.retransmit_result.keys())[0]].result))
 			elif (timeout(self.timeout)):
-				log.info(self.INFO + "Retransmission timed out, we did not receive any successful \
-													result. sending reconfig request to olympus")
+				log.info(self.INFO + "Retransmission timed out, we did not receive any successful result. sending reconfig request to olympus")
 				#send_request(operation, "retransmission")
 
 	# This method is used by client to verify the results received.
-	
+
 	def verify_result(response):
 		log.info(self.INFO + "Verifying result.")
 		index = 0
@@ -184,5 +185,5 @@ class Client(process):
 			# We will add result to dict only if it is success, if we receive success result 
 			# from alteast one replica, then we are good
 
-			if (response.result == SUCCESS):
+			if (response.result is not ERROR):
 				self.retransmit_result[r] = response
