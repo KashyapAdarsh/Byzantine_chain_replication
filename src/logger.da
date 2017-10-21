@@ -7,7 +7,7 @@ def setup_custom_logger(name, config_name):
     formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s',
                                   datefmt='%Y-%m-%d %H:%M:%S')
     file_name = '../logs/'+config_name+"log.txt"
-    print("ADARSH : "+file_name)
+    print("Logging file name : " ,(config_name+"log.txt"))
     handler = logging.FileHandler(file_name, mode='w')
     handler.setFormatter(formatter)
     screen_handler = logging.StreamHandler(stream=sys.stdout)
@@ -22,4 +22,10 @@ def set_file_name(name):
     global file_name
     file_name = (name + "_")
 
-log = setup_custom_logger("ByzantineChainReplication", "default_")
+name = "default_"
+if (len(sys.argv) > 4):
+    config = sys.argv[4]
+    name = config.split("/")
+    name = name[len(name) - 1] + "_"
+
+log = setup_custom_logger("ByzantineChainReplication", name)
