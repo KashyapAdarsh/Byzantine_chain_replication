@@ -27,7 +27,7 @@ def verify_config():
 	pass
 
 def generate_random_workload(p_request):
-	log.info("Generating Random Workload")
+	log.info("[MAIN]"+" Generating Random Workload")
 
 	p_request = p_request.lstrip('pseudorandom(')
 	p_request = p_request.rstrip(')')
@@ -42,7 +42,7 @@ def generate_random_workload(p_request):
 	return work_load
 
 def populate_workload_operations(operations):
-	log.info("Populating Random Workload Operations")
+	log.info("[MAIN] Populating Random Workload Operations")
 	work_load = []
 	for op,offset in operations:
 		if op == 0:

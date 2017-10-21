@@ -55,7 +55,11 @@ class Client(process):
 		await(len(self.head_data_store) > 0)		
 
 		ver_result  = check_expectedContent()
-		log.info(self.INFO + "verification result from check_expectedContent() method is " + str(ver_result))
+
+		if (ver_result):
+			log.info(self.INFO + "Verification  of datastore succeeded.")
+		else:
+			log.info(self.INFO + "Verification of the datastore failed.")
 
 
 	#After all work load is processed, this method checks that dictionary contains expected content at end of test case
@@ -136,12 +140,12 @@ class Client(process):
 				self.msg_details[operation.msg_id].is_response_received == True
 				# Better to print result after verification
 				if (verify_result(self.retransmit_result[list(self.retransmit_result.keys())[0]]) is False):
-					log.info(self.INFO + "Result verification failed, need to reconfigure")
+					log.error(self.INFO + "Result verification failed, need to reconfigure")
 					return
 				else:
 					log.info(self.INFO + "Retransmission result : " + str(self.retransmit_result[list(self.retransmit_result.keys())[0]].result_proof.result))
 			elif (timeout(self.timeout)):
-				log.info(self.INFO + "Retransmission timed out, we did not receive any successful result. sending reconfig request to olympus")
+				log.error(self.INFO + "Retransmission timed out, we did not receive any successful result. sending reconfig request to olympus")
 
 	# This method is used by client to verify the results received.
 
@@ -249,4 +253,4 @@ class Client(process):
 
 	def receive(msg=("head_data_store", head_data_store), from_=r):
 		log.info(self.INFO + "head_data_store receieved from head")
-		self.head_data_store = head_data_store 
+		self.head_data_store = head_data_store
