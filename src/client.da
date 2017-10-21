@@ -154,6 +154,10 @@ class Client(process):
 		index = 0
 		prev_res = None
 
+		# Verify result should have statement from all replicas
+		if (len(response.result_proof.statements) != len(self.replica_keys)):
+			return False
+
 		for statement in response.result_proof.statements:
 			verify_key = nacl.signing.VerifyKey(self.replica_keys[self.replica_list[index]], \
 												encoder=nacl.encoding.HexEncoder)

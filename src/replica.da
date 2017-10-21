@@ -133,13 +133,22 @@ class Replica(process):
 		prev_res = None
 		slot_or_res = []
 
+		# This will check if there is anything dropped from statements
+		if (shuttle_type == "result_proof_reverse_direction"):
+			# If result is going back then it should have all replicas statements
+			if (len(shuttle.statements) != len(self.config.replica_list)):
+				return False
+		elif (shuttle_type == "order_proof" or shuttle_type == "result_proof"):
+			# If shuttle is going down then it should have enough statements
+			if (len(shuttle.statements) != (self.config.replica_list.index(self.config.id)) + 1):
+				return False
+
+		# This will check if all of them have same value
 		for statement in shuttle.statements:
 			verify_key = nacl.signing.VerifyKey(self.config.replica_keys[self.config.replica_list[index]], \
 												encoder=nacl.encoding.HexEncoder)
 			index += 1
 			res = pickle.loads(verify_key.verify(statement))
-
-
 
 			if (prev_res is not None and (prev_res.operation.type != res.operation.type or \
 				prev_res.operation.data.key != res.operation.data.key or \
@@ -204,7 +213,7 @@ class Replica(process):
 		
 		# Here lets change the statement of index that is sent below in both order and result shuttle
 		if (self.failure_config.opt_type == CHANGE_OPT):
-			
+			log.info(self.INFO + "Changing the operation to get(X)")
 			# Decrypting the order statement first
 			verify_key = nacl.signing.VerifyKey(self.config.replica_keys[self.config.replica_list[index]], \
 												encoder=nacl.encoding.HexEncoder)
@@ -227,10 +236,23 @@ class Replica(process):
 			# Modifying original result statement of this replica to something wrong
 			result_shuttle.statements[index] = sign_statement(ResultStatement(res.result,operation))
 			
-		elif (self.failure_config.opt_type == DROP):
-			pass
+		elif (self.failure_config.opt_type == DROP_RESULT):
+			log.info(self.INFO + "Dropping head result statement.")
+			# Drop the result statement of the head
+			del result_shuttle.statements[0]
 		elif (self.failure_config.opt_type == CHANGE_RES):
-			pass
+			log.info(self.INFO + "Adding fake hash(OK) as result hash.")
+
+			verify_key = nacl.signing.VerifyKey(self.config.replica_keys[self.config.replica_list[index]], \
+												encoder=nacl.encoding.HexEncoder)
+
+			# Decrypting the result statement first
+			res = pickle.loads(verify_key.verify(result_shuttle.statements[index]))
+			# We add hash of OK always
+			fake_result = hash(OK)
+			# Modifying original result statement of this replica to something wrong
+			result_shuttle.statements[index] = sign_statement(ResultStatement(fake_result,res.operation))
+
 		else:
 			log.info(self.INFO + "Failure injection operation not recognized")
 

@@ -36,7 +36,7 @@ RESULT_SHUTTLE = "result_shuttle"
 
 CHANGE_OPT = "change_operation"
 CHANGE_RES = "change_result"
-DROP = "drop_result_stmt"
+DROP_RESULT = "drop_result_stmt"
 
 PUT_OPS = "put('movie1','star');put('movie2','pulp');put('movie3','reservoir');put('movie4','kill');put('movie5','jackie')"
 APPEND_OPS = "append('movie1',' wars');append('movie3',' fiction');append('movie3',' dogs');append('movie4',' bill');append('movie5',' brown')"
