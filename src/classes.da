@@ -71,11 +71,12 @@ class OrderStatement:
 		self.replica_id = id
 
 class ResultShuttle:
-	def __init__(self, client, msg_id, result):
+	def __init__(self, client, msg_id, result, operation):
 		self.client_id = client
 		self.msg_id = msg_id
 		self.statements = []
 		self.result = result
+		self.operation = operation
 
 class ResultStatement:
 	def __init__(self, result, operation):

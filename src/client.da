@@ -112,17 +112,16 @@ class Client(process):
 			# TODO :  If we receive result from all then we need to verify
 			if(await(len(self.retransmit_result) > 0)):
 				log.info(self.INFO + "Received a succesfull retransmission result from " + \
-													str(list(self.retransmit_result.keys())[0]))
+						str(list(self.retransmit_result.keys())[0]) + " for msg : " + str(operation.msg_id))
 				self.msg_details[operation.msg_id].is_response_received == True
 				# Better to print result after verification
 				if (verify_result(self.retransmit_result[list(self.retransmit_result.keys())[0]]) is False):
 					log.info(self.INFO + "Result verification failed, need to reconfigure")
 					return
 				else:
-					log.info(self.INFO + "Retransmission result : " + str(self.retransmit_result[list(self.retransmit_result.keys())[0]].result))
+					log.info(self.INFO + "Retransmission result : " + str(self.retransmit_result[list(self.retransmit_result.keys())[0]].result_proof.result))
 			elif (timeout(self.timeout)):
 				log.info(self.INFO + "Retransmission timed out, we did not receive any successful result. sending reconfig request to olympus")
-				#send_request(operation, "retransmission")
 
 	# This method is used by client to verify the results received.
 
@@ -131,7 +130,7 @@ class Client(process):
 		index = 0
 		prev_res = None
 
-		for statement in response.result_proof:
+		for statement in response.result_proof.statements:
 			verify_key = nacl.signing.VerifyKey(self.replica_keys[self.replica_list[index]], \
 												encoder=nacl.encoding.HexEncoder)
 			index += 1
@@ -171,6 +170,7 @@ class Client(process):
 	# This has to verify the result and stuff
 
 	def receive(msg=("result", response), from_=r):
+
 		# This receives results when it is normal
 		if (self.msg_details[response.msg_id].is_retransmited == False):
 			log.info(self.INFO + "Received result for msg " + str(response.msg_id))
@@ -184,10 +184,10 @@ class Client(process):
 			msg_details[response.msg_id].is_response_received = True
 		# This receives the result through retransmit
 		else :
-			log.info(self.INFO + "Received result for retransmission of " + \
-				str(response.msg_id) + " from : " + str(r))
+			#log.info(self.INFO + "Received result for retransmission of " + \
+			# 	str(response.msg_id) + " from : " + str(r))
 			# We will add result to dict only if it is success, if we receive success result 
 			# from alteast one replica, then we are good
-
-			if (response.result is not ERROR):
+			
+			if (response.result != ERROR):
 				self.retransmit_result[r] = response
