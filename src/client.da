@@ -22,7 +22,9 @@ class Client(process):
 		self.verify_key = None
 		self.replica_list = None
 		self.olympus = olympus
+		self.data_store = dict()
 		self.retransmit_result = dict()
+		self.head_data_store = dict()
 		self.timeout = float(init_config[CLIENT_TIMEOUT])
 		self.INFO = "["+str(self.client_id).replace('>', "").replace('<', '')+"] "
 		log.info(self.INFO + "Setup complete")
@@ -44,8 +46,26 @@ class Client(process):
 			if (operation == None):
 				continue
 			send_request(operation, "new")
+			execute_operation(operation)
 
-	# This method will register a client to olympus
+		#after all work load is processed check that dictionary contains expected content at end of test case
+		log.info(self.INFO + "sending data store query request to head")
+		send(("query_data_store"), to=self.replica_head)
+	
+		await(len(self.head_data_store) > 0)		
+
+		ver_result  = check_expectedContent()
+		log.info(self.INFO + "verification result from check_expectedContent() method is " + str(ver_result))
+
+
+	#After all work load is processed, this method checks that dictionary contains expected content at end of test case
+
+	def check_expectedContent():
+		log.info(self.INFO + "verifying data store query request result from head to local data store")
+		return all(item in head_data_store.items() for item in self.data_store.items())
+
+
+	# Thi method will register a client to olympus
 	def register_with_client():
 		verify_key_hex = generate_keys()
 		send(("register_client",self.client_id, verify_key_hex), to=self.olympus)
@@ -149,6 +169,42 @@ class Client(process):
 		log.info(self.INFO + "Verification of result succesful.")
 		return True
 
+	#This method executes the operations by itself as well, the ones that it sends to replicas.
+	#Later, all results on replicas are queried and verifies with locally stored results
+
+	def execute_operation(operation):
+		if (operation.type == PUT):
+			self.data_store[operation.data.key] = [operation.data.value]
+			return OK
+
+		elif (operation.type == APPEND):
+			if (operation.data.key in self.data_store):
+				self.data_store[operation.data.key].append(operation.data.value)
+				return OK
+			return FAIL
+
+		elif (operation.type == SLICE):
+			start = int(operation.data.value.split(":")[0])
+			end = int(operation.data.value.split(":")[1])
+
+			if (operation.data.key not in self.data_store or start < 0 \
+									or end > len(self.data_store)):
+				return FAIL
+			else:
+				self.data_store[operation.data.key] = \
+						self.data_store[operation.data.key][start : end]
+				return OK
+
+		elif (operation.type == GET):
+			if (operation.data.value not in self.data_store):
+				return NOT_PRESENT
+			else:
+				return self.data_store[operation.data.value]
+
+		else:
+			return ERROR
+
+
 	def broadcast_request(operation):
 		# This will broadcast the retransmission to all replicas
 		for replica, val in self.replica_keys.items():
@@ -188,6 +244,9 @@ class Client(process):
 			# 	str(response.msg_id) + " from : " + str(r))
 			# We will add result to dict only if it is success, if we receive success result 
 			# from alteast one replica, then we are good
-			
 			if (response.result != ERROR):
 				self.retransmit_result[r] = response
+
+	def receive(msg=("head_data_store", head_data_store), from_=r):
+		log.info(self.INFO + "head_data_store receieved from head")
+		self.head_data_store = head_data_store 

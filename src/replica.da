@@ -464,3 +464,10 @@ class Replica(process):
 	def receive(msg=("become_immutable"), from_=r):
 		log.info(self.INFO + "Received message to become immutable")
 		self.config.mode = IMMUTABLE
+
+	#client sends query check that dictionary contains expected content at end of test case
+	def receive(msg=("query_data_store"), from_=client):
+		log.info(self.INFO + "Received data_store query from client " + str(client))
+		send(("head_data_store", self.config.data_store), to=client)
+		log.info(self.INFO + "Sent data_store to requesting client " + str(client))
+		
