@@ -347,7 +347,6 @@ class Replica(process):
 			log.info(self.INFO + "Datastore before sending to client : " + str(self.config.data_store))
 			send(("result", response), to=order_shuttle.client_id)
 			# send result shuttle back
-			self.result_shuttle_count[operation.client_id] += 1
 			send(("backward_result", result_shuttle), to=self.config.prev_replica_id)
 		else:
 			log.info(self.INFO + "Forwarding the shuttle to " + str(self.config.next_replica_id) \
@@ -420,7 +419,7 @@ class Replica(process):
 		# This checks if we are supposed to inject some failure before sending 
 		# the shuttle ahead
 
-		if ((self.failure_config is not None and is_failure_condition_satisfied()) or self.forward_msg_fail is True):
+		if ((self.failure_config is not None and is_failure_condition_satisfied(str(operation.msg_id))) or self.forward_msg_fail is True):
 			log.info(self.INFO + "Failure Injection condition satisfied.")
 			order_shuttle, result_shuttle = perform_failure_injection(order_shuttle, result_shuttle, 0)
 

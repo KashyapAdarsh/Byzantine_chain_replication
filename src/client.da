@@ -103,10 +103,8 @@ class Client(process):
 		elif (GET in opt):
 			value = opt[opt.index('(') + 1:opt.index(')')].replace("'", "").strip()
 			operation = Operation(GET, msg_id, Data(None, value), self.client_id)
-
-		# Pseudorandom operations
 		else :
-			pass
+			log.info(self.INFO + "Operation type not recognized.")
 
 		return operation
 
