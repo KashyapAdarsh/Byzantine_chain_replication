@@ -59,7 +59,7 @@ class Client(process):
 		if (ver_result):
 			log.info(self.INFO + "Verification  of datastore succeeded.")
 		else:
-			log.info(self.INFO + "Verification of the datastore failed.")
+			log.error(self.INFO + "Verification of the datastore failed.")
 
 
 	#After all work load is processed, this method checks that dictionary contains expected content at end of test case
@@ -150,7 +150,7 @@ class Client(process):
 	# This method is used by client to verify the results received.
 
 	def verify_result(response):
-		log.info(self.INFO + "Verifying result.")
+		log.info(self.INFO + "Verifying result for msg " + str(response.msg_id))
 		index = 0
 		prev_res = None
 
@@ -174,7 +174,7 @@ class Client(process):
 
 			prev_res = res
 
-		log.info(self.INFO + "Verification of result succesful.")
+		log.info(self.INFO + "Verification of result for msg "+str(response.msg_id)+" succesful.")
 		return True
 
 	#This method executes the operations by itself as well, the ones that it sends to replicas.
@@ -240,7 +240,8 @@ class Client(process):
 			log.info(self.INFO + "Received result for msg " + str(response.msg_id))
 
 			if(verify_result(response) == False):
-				log.info(self.INFO + "Result verification failed, asking olympus to reconfigure")
+				log.error(self.INFO + "Result verification failed for msg "+ \
+						str(response.msg_id)+", asking olympus to reconfigure")
 				return
 
 			log.info(self.INFO + "Result verified for msg "+ str(response.msg_id) + \

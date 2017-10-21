@@ -58,7 +58,7 @@ class Replica(process):
 		
 		# Case1 - result is cached
 		if (operation.msg_id in result_cache):
-			log.info(self.INFO + "Result for " + str(operation.msg_id) + " is saved, sending to client")
+			log.info(self.INFO + "Result for " + str(operation.msg_id) + " is saved, sending to client" + str(sender))
 			response = ResponseObject(operation.msg_id, self.result_cache[operation.msg_id].result, \
 						self.result_cache[operation.msg_id].statements)
 
@@ -78,15 +78,17 @@ class Replica(process):
 						
 						send(("trigger_forward_msg_failure", failure_config), to=self.config.head_id)
 
-				# This will start a custom timer
-				log.info(self.INFO + "Starting retransmission timer and sending request to head.")
+				# This will start a custom timer  
+				log.info(self.INFO + "Starting retransmission timer and sending request to head for msg " \
+						+ str(operation.msg_id))
 				timer = CustomTimer(float(self.config.head_timeout), timer_callback, self.config.id, operation)
 				# add the timer object to msg cache of this replica
 				msg_cache[operation.msg_id] = timer
 				send(("retransmit_operation", operation, None, None), to=self.config.head_id)
 			else:
 				# This will start a custom timer
-				log.info (self.INFO + "Starting retransmission timer and starting order shuttle down the chain.")
+				log.info (self.INFO + "Starting retransmission timer and starting order shuttle down the chain for msg" \
+						 + str(operation.msg_id))
 				timer = CustomTimer(float(self.config.nonhead_timeout), timer_callback, self.config.id, operation)
 				# add the timer object to msg cache of this replica
 				msg_cache[operation.msg_id] = timer
@@ -95,10 +97,9 @@ class Replica(process):
 	# By the timer timer calls this callback, we should have recevied the result shuttle, stop this timer and
 	# send response to client
 	def timer_callback(id, operation):
-		log.error(self.INFO +  "TIME OUT for replica " + str(id) + ", requesting olympus to reconfigure")
-		# TODO - RECONFIGURE
-		self.config.mode = IMMUTABLE
-		log.info(self.INFO + "Mode changed to immutable")
+		log.error(self.INFO +  "TIME OUT for replica " + str(id) + " for msg"+ str(operation.msg_id) \
+				+", requesting olympus to reconfigure")
+		send_immutable_msg()		
 		msg_cache[operation.msg_id].stop()
 
 	# This method handles sending order shuttle down the chain
@@ -167,16 +168,17 @@ class Replica(process):
 		# Slot has to be same for everyone if it is order proof or else
 		# hash of result has to be same if it is res shuttle
 		if (len(set(slot_or_res)) == 1):
-			log.info(self.INFO + "Verification of "+ shuttle_type+" succesful")
+			log.info(self.INFO + "Verification of "+ shuttle_type +" succesful for msg "\
+					+str(shuttle.operation.msg_id))
 			return True
 
 		return False
 
 	# This is the main method that checks if it is the right time to trigger
 	# a failure.
-	def is_failure_condition_satisfied():
+	def is_failure_condition_satisfied(msg):
 		# If replica has received 'm' messages from a particular client
-		log.info(self.INFO + "checking if failure injection criteria is satisfied")
+		log.info(self.INFO + "checking if failure injection criteria is satisfied for msg " + msg)
 		if (self.failure_config.shuttle_type == CLIENT_REQUEST):
 			if (self.client_counts[self.failure_config.client_id] == self.failure_config.msg_count):
 				self.client_counts[self.failure_config.client_id] = 0
@@ -273,7 +275,8 @@ class Replica(process):
 		operation = order_shuttle.operation
 
 		slot =  order_shuttle.slot
-		log.info(self.INFO + "Received shuttle from "+ str(replica))
+		log.info(self.INFO + "Received shuttle from "+ str(replica) \
+				+" for msg "+str(operation.msg_id))
 
 		# Everytime we receive a shuttle from a particular client, we increment the count. This is
 		# used to inject failure while shuttle is traveling down the chain 
@@ -288,10 +291,11 @@ class Replica(process):
 		result = execute_operation(operation)
 
 		order_shuttle.statements.append(sign_statement(OrderStatement(slot, \
-														operation, self.config.id)))
+										operation, self.config.id)))
 
 		if (verify_shuttle(order_shuttle, "order_proof") == False):
-			log.error(self.INFO + "Order shuttle verification failed, we need to ask olympus to reconfigure")
+			log.error(self.INFO + "Order shuttle verification failed for msg "+ str(operation.msg_id)\
+					+", we need to ask olympus to reconfigure")
 			send_immutable_msg()
 			return
 
@@ -299,7 +303,8 @@ class Replica(process):
 														operation)))
 		
 		if (verify_shuttle(result_shuttle, "result_proof") == False):
-			log.error(self.INFO + "Result shuttle verification failed, we need to ask olympus to reconfigure")
+			log.error(self.INFO + "Result shuttle verification failed msg "+ str(operation.msg_id)\
+					+ ", we need to ask olympus to reconfigure")
 			send_immutable_msg()
 			return
 
@@ -307,8 +312,10 @@ class Replica(process):
 		result_shuttle.result = result
 
 		# This is used to inject failure
-		if ((self.failure_config is not None and is_failure_condition_satisfied()) or self.forward_msg_fail is True):
-			log.info(self.INFO + "Failure Injection condition satisfied.")
+		if ((self.failure_config is not None and is_failure_condition_satisfied(str(operation.msg_id))) \
+																	or self.forward_msg_fail is True):
+
+			log.info(self.INFO + "Failure Injection condition satisfied for msg "+ str(operation.msg_id))
 			order_shuttle, result_shuttle = perform_failure_injection(order_shuttle, \
 						result_shuttle, self.config.replica_list.index(self.config.id))
 
@@ -325,22 +332,26 @@ class Replica(process):
 			# Cache the result and send it back
 			result_cache[result_shuttle.msg_id] = result_shuttle
 
+			self.result_shuttle_count[result_shuttle.client_id] += 1
+
 			# When result shuttle reached tail, if we have started timer then we send 
 			# result to client and stop timer
 			if (self.msg_cache[result_shuttle.msg_id] is not None):
 				# Stop the running timer
-				log.info(self.INFO + "Result received for retransmission, sending this to" + \
-						  " client before caching it")
+				log.info(self.INFO + "Result received for retransmission of msg "+ str(result_shuttle.msg_id)\
+						+", sending this to" + " client before caching it")
 				self.msg_cache[result_shuttle.msg_id].stop()
 				response = ResponseObject(result_shuttle.msg_id, SUCCESS, result_shuttle)
 				#send(("result", response), to=order_shuttle.client_id)
-
+			
+			log.info(self.INFO + "Datastore before sending to client : " + str(self.config.data_store))
 			send(("result", response), to=order_shuttle.client_id)
 			# send result shuttle back
 			self.result_shuttle_count[operation.client_id] += 1
 			send(("backward_result", result_shuttle), to=self.config.prev_replica_id)
 		else:
-			log.info(self.INFO + "Forwarding the shuttle to " + str(self.config.next_replica_id))
+			log.info(self.INFO + "Forwarding the shuttle to " + str(self.config.next_replica_id) \
+					+ " for msg "+str(operation.msg_id))
 			send(("operation", None, order_shuttle, result_shuttle), to=self.config.next_replica_id)
 
 
@@ -356,7 +367,7 @@ class Replica(process):
 			# While shuttle is going back if condition failure condition is satisfied we 
 			# inject the failure. order_shuttle will be None
 
-			if (self.failure_config is not None and is_failure_condition_satisfied()):
+			if (self.failure_config is not None and is_failure_condition_satisfied(str(result_shuttle.msg_id))):
 				log.info(self.INFO + "Failure Injection condition satisfied.")
 				dummy, result_shuttle = perform_failure_injection(None, \
 						result_shuttle, self.config.replica_list.index(self.config.id))
@@ -365,10 +376,10 @@ class Replica(process):
 			if (not self.config.is_head):
 				send(("backward_result", result_shuttle), to=self.config.prev_replica_id)
 		else:
-			log.error(self.INFO + "Result shuttle verification failed, we need to request olympus to reconfigure")
+			log.error(self.INFO + "Result shuttle verification failed for msg "+ str(result_shuttle.msg_id) \
+					+", we need to request olympus to reconfigure")
 			send_immutable_msg()
 			return
-
 
 	def sign_statement(statement):
 		#return statement
@@ -417,7 +428,8 @@ class Replica(process):
 		history.append(order_shuttle)
 
 		# Same send will be used for both order and result shuttle down the chain
-		log.info(self.INFO + "Forwarding the shuttle to " + str(self.config.next_replica_id))
+		log.info(self.INFO + "Forwarding the shuttle for msg "+ str(operation.msg_id) \
+				+ " to " + str(self.config.next_replica_id))
 		send(("operation", None, order_shuttle, result_shuttle), to=self.config.next_replica_id)
 
 
