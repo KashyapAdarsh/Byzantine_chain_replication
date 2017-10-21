@@ -12,6 +12,7 @@ import sys
 
 class Replica(process):
 
+	# Main setup function that receives all the information required by replicas
 	def setup(replica_config):
 		# ReplicaConfig object
 		self.config = replica_config
@@ -31,11 +32,11 @@ class Replica(process):
 		self.INFO = "["+str(self.config.id).replace('>', "").replace('<', '')+"] "
 		log.info(INFO +"Setup complete")
 
-	# Need to define till when replicas are up and running
-
 	def run():
 		await(self.test == True)
 
+	# This method is used to initialize all the datastructures that keeps track of
+	# various message counts for each client.
 	def init_counts():
 		# Adds count 0 for all clients
 		for key in list(self.config.clients.keys()):
@@ -45,7 +46,6 @@ class Replica(process):
 			self.result_shuttle_count[key] = 0
 
 	# This method verifies if client is valid
-
 	def is_valid_client(c):
 		if (c in self.config.clients):
 			return True
@@ -54,6 +54,9 @@ class Replica(process):
 	# This method is used by replicas to handle retransmission
 	# We start a timer for every replica here and if we do not receive replicas
 	# before that time then we reconfig. We have multiple cases here
+	# 1) If result is cached already, we directly send it to client.
+	# 2) If not we start a timer and forward that request to the head.
+
 	def handle_retransmission(operation=None, sender=None, result_shuttle=None, order_shuttle=None):
 		
 		# Case1 - result is cached
@@ -94,8 +97,9 @@ class Replica(process):
 				msg_cache[operation.msg_id] = timer
 				send_new_shuttle(operation, sender)
 
-	# By the timer timer calls this callback, we should have recevied the result shuttle, stop this timer and
-	# send response to client
+	# If this timer callback is invoked, our replicas are timedout on retransmission, so we
+	# need to reconfigure. Currently it will also send a message for others to become immutable.
+
 	def timer_callback(id, operation):
 		log.error(self.INFO +  "TIME OUT for replica " + str(id) + " for msg"+ str(operation.msg_id) \
 				+", requesting olympus to reconfigure")
@@ -103,7 +107,7 @@ class Replica(process):
 		msg_cache[operation.msg_id].stop()
 
 	# This method handles sending order shuttle down the chain
-	# Here we have multiple cases based on if the replica is HEAD or TAIL
+	# Here we have multiple cases based on if the replica is HEAD or Normal replicas
 
 	def handle_transmission(operation=None, sender=None, result_shuttle=None, order_shuttle=None):
 		# Case when replica is a head
@@ -175,7 +179,8 @@ class Replica(process):
 		return False
 
 	# This is the main method that checks if it is the right time to trigger
-	# a failure.
+	# a failure. We use failure configration object for details.
+
 	def is_failure_condition_satisfied(msg):
 		# If replica has received 'm' messages from a particular client
 		log.info(self.INFO + "checking if failure injection criteria is satisfied for msg " + msg)
@@ -211,7 +216,8 @@ class Replica(process):
 	# 4) Above is repeated for both order and result shuttle
 
 	def perform_failure_injection(order_shuttle, result_shuttle, index):
-		log.info(self.INFO + "Performing failure injection - " + self.failure_config.opt_type)
+		log.info(self.INFO + "Performing failure injection - " + self.failure_config.opt_type \
+				+ " for msg " + str(result_shuttle.msg_id) )
 		
 		# Here lets change the statement of index that is sent below in both order and result shuttle
 		if (self.failure_config.opt_type == CHANGE_OPT):
@@ -260,7 +266,7 @@ class Replica(process):
 
 		return order_shuttle, result_shuttle
 
-
+	# This method currently sends a message to all replicas asking them to become immutable.
 	def send_immutable_msg():
 		for replica in self.config.replica_list:
 			send(("become_immutable"), to=replica)
@@ -270,6 +276,7 @@ class Replica(process):
 	# We have 2 cases : 
 	#	1) If tail, send result to client and send result shuttle backwards
 	#	2) If not tail, just add current result and forward it.
+	# We also check if we need to inject failures in this method.
 
 	def forward_shuttle(replica, result_shuttle, order_shuttle):
 		operation = order_shuttle.operation
@@ -293,6 +300,7 @@ class Replica(process):
 		order_shuttle.statements.append(sign_statement(OrderStatement(slot, \
 										operation, self.config.id)))
 
+		# Verify the order shuttle before it is sent ahead
 		if (verify_shuttle(order_shuttle, "order_proof") == False):
 			log.error(self.INFO + "Order shuttle verification failed for msg "+ str(operation.msg_id)\
 					+", we need to ask olympus to reconfigure")
@@ -302,6 +310,7 @@ class Replica(process):
 		result_shuttle.statements.append(sign_statement(ResultStatement(hash(result), \
 														operation)))
 		
+		# Verify the result shuttle before it is sent ahead
 		if (verify_shuttle(result_shuttle, "result_proof") == False):
 			log.error(self.INFO + "Result shuttle verification failed msg "+ str(operation.msg_id)\
 					+ ", we need to ask olympus to reconfigure")
@@ -311,7 +320,7 @@ class Replica(process):
 		# Unhashed result
 		result_shuttle.result = result
 
-		# This is used to inject failure
+		# This is used to inject failure.
 		if ((self.failure_config is not None and is_failure_condition_satisfied(str(operation.msg_id))) \
 																	or self.forward_msg_fail is True):
 
@@ -325,7 +334,8 @@ class Replica(process):
 		# We have to send result to client and start result shuttle message
 		# backwards if it is a tail, else just forward the shuttle.
 		if (self.config.is_tail):
-			#log.info(self.INFO + "Sending result to client " + str(order_shuttle.client_id))
+			log.info(self.INFO + "Sending result to client " + str(order_shuttle.client_id) \
+					+ " for msg " + str(result_shuttle.msg_id))
 			# We make a response object before sending
 			response = ResponseObject(result_shuttle.msg_id, result, result_shuttle)
 
@@ -353,6 +363,9 @@ class Replica(process):
 					+ " for msg "+str(operation.msg_id))
 			send(("operation", None, order_shuttle, result_shuttle), to=self.config.next_replica_id)
 
+	# This method receives result shuttle from backward direction.
+	# We verify as soon as we receive it before sending above and also we need to check
+	# if we need to trigger any failures.
 
 	def send_result_backward(result_shuttle):
 		if (verify_shuttle(result_shuttle, "result_proof_reverse_direction") == True):
@@ -380,16 +393,18 @@ class Replica(process):
 			send_immutable_msg()
 			return
 
+	# Helper to sign the statements that we receive
 	def sign_statement(statement):
-		#return statement
 		return self.config.signing_key.sign(pickle.dumps(statement))
 
+	# Helper to hash the result.
 	def hash(result):
 		digest = HASHER(pickle.dumps(result), encoder=nacl.encoding.HexEncoder)
 		return digest
 
 	# This method will be used by the head first time to create new shuttle and
-	# forward the same to next replica.
+	# forward the same to next replica. 
+	# We also check for any triggers that head is supposed to carry on.
 
 	def send_new_shuttle(operation, client):
 		slot = get_next_slot()
@@ -493,6 +508,8 @@ class Replica(process):
 			# TODO - Need to send error statement to client
 			pass
 
+	# Any retransmission operation from client or from other replicas to head is received here.
+
 	def receive(msg=("retransmit_operation", operation, order_shuttle, result_shuttle), from_=sender):
 		if (self.config.mode == ACTIVE):
 			# If replica is head, if we receive operation request from any replica and we already started shuttle 
@@ -546,6 +563,8 @@ class Replica(process):
 		self.forward_msg_fail = True
 		self.failure_config = failure_config
 
+	# This reveiver receives message to become immutable.
+
 	def receive(msg=("become_immutable"), from_=r):
 		log.info(self.INFO + "Received message to become immutable")
 		self.config.mode = IMMUTABLE
@@ -557,4 +576,3 @@ class Replica(process):
 		log.info(self.INFO + "Received data_store query from client " + str(client))
 		send(("head_data_store", self.config.data_store), to=client)
 		log.info(self.INFO + "Sent data_store to requesting client " + str(client))
-		
