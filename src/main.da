@@ -70,11 +70,13 @@ def main():
 		clients = new(Client, num=num)
 		for client_num, client in enumerate(clients):
 			# Get workload for every client
-			if client_num == 0:
-				work_load = generate_random_workload(config[WORKLOAD + "[" + str(client_num) + "]"]) 
+			requests = config[WORKLOAD + "[" + str(client_num) + "]"]
+
+			if requests.startswith('pseudorandom'):
+				work_load = generate_random_workload(requests)
 			else:
-				work_load = config[WORKLOAD + "[" + str(client_num) + "]"].split(';')
-			
+				work_load = requests.split(';')
+
 			setup(client, [olympus, client, config, work_load])
 			start(client)
 			
