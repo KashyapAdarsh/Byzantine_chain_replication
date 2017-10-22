@@ -174,13 +174,10 @@ CODE SIZE
 
 Numbers of non-blank non-comment lines of code (LOC):
 
-----------------------
-|	TYPE 	 |	LOC  |
-----------------------
-| Algorithm  | 540   |
-|  Other	 | 376	 |
-|  Total 	 | 916 	 |
-----------------------
+	Algorithm : 540
+	Other 	  : 376
+	Total 	  : 916
+
 
 Used CLOC https://github.com/AlDanial/cloc
 
