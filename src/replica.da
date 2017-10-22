@@ -89,13 +89,19 @@ class Replica(process):
 				msg_cache[operation.msg_id] = timer
 				send(("retransmit_operation", operation, None, None), to=self.config.head_id)
 			else:
-				# This will start a custom timer
-				log.info (self.INFO + "Starting retransmission timer and starting order shuttle down the chain for msg" \
-						 + str(operation.msg_id))
-				timer = CustomTimer(float(self.config.nonhead_timeout), timer_callback, self.config.id, operation)
-				# add the timer object to msg cache of this replica
-				msg_cache[operation.msg_id] = timer
-				send_new_shuttle(operation, sender)
+				# If head has already seen the message, but does not have result
+				if (operation.msg_id in self.msg_cache):
+					log.info(self.INFO + "Head has already seen the msg "+ str(operation.msg_id) +", so we don't start a new shuttle. \
+						Let's wait for result shuttle to come back")
+				else:
+					# This will start a custom timer
+					log.info(self.INFO + "Head has not seen the message at all.")
+					log.info (self.INFO + "Starting retransmission timer and starting order shuttle down the chain for msg" \
+							 + str(operation.msg_id))
+					timer = CustomTimer(float(self.config.nonhead_timeout), timer_callback, self.config.id, operation)
+					# add the timer object to msg cache of this replica
+					msg_cache[operation.msg_id] = timer
+					send_new_shuttle(operation, sender)
 
 	# If this timer callback is invoked, our replicas are timedout on retransmission, so we
 	# need to reconfigure. Currently it will also send a message for others to become immutable.
@@ -335,8 +341,6 @@ class Replica(process):
 		# We have to send result to client and start result shuttle message
 		# backwards if it is a tail, else just forward the shuttle.
 		if (self.config.is_tail):
-			log.info(self.INFO + "Sending result to client " + str(order_shuttle.client_id) \
-					+ " for msg " + str(result_shuttle.msg_id))
 			# We make a response object before sending
 			response = ResponseObject(result_shuttle.msg_id, result, result_shuttle)
 
@@ -356,6 +360,8 @@ class Replica(process):
 				#send(("result", response), to=order_shuttle.client_id)
 			
 			log.info(self.INFO + "Datastore before sending to client : " + str(self.config.data_store))
+			log.info(self.INFO + "Sending result to client " + str(order_shuttle.client_id) \
+					+ " for msg " + str(result_shuttle.msg_id))
 			send(("result", response), to=order_shuttle.client_id)
 			# send result shuttle back
 			send(("backward_result", result_shuttle), to=self.config.prev_replica_id)
@@ -445,6 +451,7 @@ class Replica(process):
 		# Same send will be used for both order and result shuttle down the chain
 		log.info(self.INFO + "Forwarding the shuttle for msg "+ str(operation.msg_id) \
 				+ " to " + str(self.config.next_replica_id))
+		#time.sleep(10)
 		send(("operation", None, order_shuttle, result_shuttle), to=self.config.next_replica_id)
 
 
@@ -515,7 +522,8 @@ class Replica(process):
 		if (self.config.mode == ACTIVE):
 			# If replica is head, if we receive operation request from any replica and we already started shuttle 
 			# for this operation, we just ignore
-			if (self.config.is_head and ("Replica" in str(sender)) and self.msg_cache[operation.msg_id] is not None):
+			if (self.config.is_head and ("Replica" in str(sender))): #and self.msg_cache[operation.msg_id] is not None):
+				log.info(self.INFO + "Received retransmission forward from replicas")
 				pass
 			else:
 				handle_retransmission(operation=operation, sender=sender, result_shuttle=result_shuttle, \
