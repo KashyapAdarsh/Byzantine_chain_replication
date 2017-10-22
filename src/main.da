@@ -20,6 +20,9 @@ def read_config(file, log):
 	for line in lines:
 		if (not line.startswith('#') and not line.startswith('\n')):
 			config[line.split('=')[0].strip()] = line.split('=')[1].strip()
+
+	log.info("INIT_CONFIG: " + str(config))
+
 	return config		
 
 # Might need this to verify if all configurations are read properly
@@ -67,7 +70,17 @@ def main():
 
 	def initialize_client(config, olympus, num):
 		log.info(INFO + "Initializing clients")
-		clients = new(Client, num=num)
+		hosts = config[CLIENT_HOSTS].split(';')
+		clients = []
+
+		# Running clients on different hosts
+		for i in range(num):
+			node = 'Node' + str(hosts[i])
+			clients.append(new(Client, agrs=(), at=node))
+
+		clients = [next(iter(client)) for client in clients]
+		# clients = new(Client, num=num)
+
 		for client_num, client in enumerate(clients):
 			# Get workload for every client
 			requests = config[WORKLOAD + "[" + str(client_num) + "]"]
@@ -99,8 +112,6 @@ def main():
 
 	# Initialize Olympus
 	olympus = initialize_olympus(config)
-
-	time.sleep(1)
 
 	# Initialize a client
 	initialize_client(config, olympus, int(config[CLIENT_COUNT]))

@@ -8,7 +8,7 @@ def setup_custom_logger(name, config_name):
                                   datefmt='%Y-%m-%d %H:%M:%S')
     file_name = '../logs/'+config_name+"log.txt"
     print("Logging file name : " ,(config_name+"log.txt"))
-    handler = logging.FileHandler(file_name, mode='w')
+    handler = logging.FileHandler(file_name, mode='a')
     handler.setFormatter(formatter)
     screen_handler = logging.StreamHandler(stream=sys.stdout)
     screen_handler.setFormatter(formatter)
@@ -23,9 +23,11 @@ def set_file_name(name):
     file_name = (name + "_")
 
 name = "default_"
+'''
 if (len(sys.argv) > 4):
     config = sys.argv[4]
     name = config.split("/")
     name = name[len(name) - 1] + "_"
+'''
 
-log = setup_custom_logger("ByzantineChainReplication", name)
+log = setup_custom_logger("ByzantineChainReplication", "default_")

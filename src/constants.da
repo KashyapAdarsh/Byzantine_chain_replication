@@ -10,7 +10,8 @@ HEAD_TIMEOUT = "head_timeout"
 NONHEAD_TIMEOUT = "nonhead_timeout"
 WORKLOAD = "workload"
 FAILUERS = "failuers"
-
+CLIENT_HOSTS = "client_hosts"
+REPLICA_HOSTS = "replica_hosts"
 # Constants used by client
 
 PUT = "put"

@@ -21,6 +21,7 @@ class Client(process):
 		self.replica_keys = None
 		self.verify_key = None
 		self.replica_list = None
+		self.replicas_ready = False
 		self.olympus = olympus
 		self.data_store = dict()
 		self.retransmit_result = dict()
@@ -30,15 +31,19 @@ class Client(process):
 		log.info(self.INFO + "Setup complete")
 
 	def run():
+
+		print ("LOG - ", str(log))
+
 		generate_keys()
-		register_with_client()
+		register_with_olympus()
 		
 		# For various operations, we send next operation only after receiving
 		# response for current operation
 
 		# We sleep for small time so that olympus can share client details to
 		# everyone by then.
-		time.sleep(2)
+
+		await(self.replicas_ready == True)
 
 		for load in work_load:
 			msg_id = uuid.uuid4()
@@ -70,10 +75,11 @@ class Client(process):
 
 
 	# Thi method will register a client to olympus
-	def register_with_client():
+	def register_with_olympus():
 		verify_key_hex = generate_keys()
 		send(("register_client",self.client_id, verify_key_hex), to=self.olympus)
 		# Wait untill we recieve back data from olympus
+		log.info(self.INFO + "Waiting till we receive all replica details from olympus")
 		await(self.replica_keys != None)
 
 	# This method generates a signing key and verification key
@@ -257,3 +263,6 @@ class Client(process):
 	def receive(msg=("head_data_store", head_data_store), from_=r):
 		log.info(self.INFO + "head_data_store receieved from head")
 		self.head_data_store = head_data_store
+
+	def receive(msg=("replicas_ready"), from_=o):
+		self.replicas_ready = True

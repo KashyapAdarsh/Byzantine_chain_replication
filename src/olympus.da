@@ -20,7 +20,7 @@ class Olympus(process):
 		self.verify_keys = dict()
 		self.olympus_id = uuid.uuid4()
 		self.configs = []
-		self.replica_list = None
+		self.replica_list = []
 		self.active_config = None
 		self.wedged_data = dict()
 		self.data_store = dict()
@@ -30,6 +30,7 @@ class Olympus(process):
 		self.tail = None
 		self.no_of_replicas = (2 * float(init_config[TOLERENCE])) + 1 # 2t+1
 		self.no_of_clients = float(init_config[CLIENT_COUNT])
+		self.all_replicas_spawned = False
 		self.privateKey = None
 		self.INFO = "[OLYMPUS] "
 		log.info(self.INFO + "Olympus setup complete, assigned ID :" + str(self.olympus_id))
@@ -39,11 +40,23 @@ class Olympus(process):
 		make_new_replica()
 
 		# Wait untill all the clients register with olympus
+		# await(len(self.clients) == int(self.no_of_clients))
+
 		await(len(self.clients) == self.no_of_clients)
 
+		#print("await passed")
+
 		# Sends client info to everyone
-		for replica in replica_list:
+		for replica in self.replica_list:
 			send(("client_details", self.clients), to=replica)
+
+		#print("Sent client details to replicas")
+
+		for client in self.client_list:
+			#print(client)
+			send(("replicas_ready"),to=client)
+
+		#print("Sent replica ready")
 
 		# Send fault injection to everyone
 		send_fault_injection()
@@ -90,11 +103,17 @@ class Olympus(process):
 	# 1) If we are spawning for the first time
 	# 2) If we are reconfiguring
 	def spawn_replicas():
-		if (self.replica_list == None):
+		if not self.replica_list:
 			log.info(self.INFO + "Creating new replicas.")
-			self.replica_list = new(Replica, num=int(self.no_of_replicas))
-			# Converting set to list
-			self.replica_list = list(self.replica_list)
+
+			replica_hosts = self.init_config[REPLICA_HOSTS].split(';')
+
+			# Running clients on different hosts
+			for i in range(int(self.no_of_replicas)):
+				node = 'Node' + str(replica_hosts[i])
+				self.replica_list.append(new(Replica, agrs=(), at=node))
+
+			self.replica_list = [next(iter(replica)) for replica in self.replica_list]
 
 			generate_keys()
 
@@ -110,6 +129,14 @@ class Olympus(process):
 
 				setup(self.replica_list[index],[replica_config])
 				start(self.replica_list[index])
+
+			self.all_replicas_spawned = True
+			
+			replica_chain = ""
+			for replica in self.replica_list:
+				replica_chain += str(replica) + '-->'
+			log.info(self.INFO + "Chain---> " + replica_chain)			
+
 		else:
 			log.info(self.INFO + "Deleting old replicas.")
 			pass
@@ -170,7 +197,6 @@ class Olympus(process):
 		log.info(self.INFO + "Sending replica details to client " + str(client))
 		send(("client_config", conf), to=client)
 
-
 	################### Receivers for olympus ######################
 
 	# Receiver for registering client with olympus.
@@ -178,4 +204,5 @@ class Olympus(process):
 		log.info(self.INFO + "Received request to register client : " + str(client_id))
 		self.clients[client_id] = client_key
 		self.client_list.append(client_id)
+		await(self.all_replicas_spawned == True)
 		send_client_config(c)
