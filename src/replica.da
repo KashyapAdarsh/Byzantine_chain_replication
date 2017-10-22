@@ -110,13 +110,14 @@ class Replica(process):
 	# Here we have multiple cases based on if the replica is HEAD or Normal replicas
 
 	def handle_transmission(operation=None, sender=None, result_shuttle=None, order_shuttle=None):
-		# Case when replica is a head
-		if (self.config.is_head):
-			print_opt(operation)
-			send_new_shuttle(operation, sender)
-		# For any other case
-		else:
-			forward_shuttle(sender, result_shuttle, order_shuttle)
+		if (self.config.mode == ACTIVE):
+			# Case when replica is a head
+			if (self.config.is_head):
+				print_opt(operation)
+				send_new_shuttle(operation, sender)
+			# For any other case
+			else:
+				forward_shuttle(sender, result_shuttle, order_shuttle)
 
 	# Helper to print		
 	def print_opt(operation):
@@ -368,7 +369,7 @@ class Replica(process):
 	# if we need to trigger any failures.
 
 	def send_result_backward(result_shuttle):
-		if (verify_shuttle(result_shuttle, "result_proof_reverse_direction") == True):
+		if (self.config.mode == ACTIVE and verify_shuttle(result_shuttle, "result_proof_reverse_direction") == True):
 
 			# This is used to inject failure in result shuttle while coming back
 			self.result_shuttle_count[result_shuttle.client_id] += 1
