@@ -34,11 +34,11 @@ Version - ‘Python 3.5.2’
 FILES
 -----
 
-Olympus :	~/Byzantine_chain_replication/src/olympus.da
-Clients :	~/Byzantine_chain_replication/src/client.da
-Replicas:	~/Byzantine_chain_replication/src/replica.da
-Configs	:	~/Byzantine_chain_replication/configs
-Logs 	:	~/Byzantine_chain_replication/logs
+	Olympus :	~/Byzantine_chain_replication/src/olympus.da
+	Clients :	~/Byzantine_chain_replication/src/client.da
+	Replicas:	~/Byzantine_chain_replication/src/replica.da
+	Configs	:	~/Byzantine_chain_replication/configs
+	Logs 	:	~/Byzantine_chain_replication/logs
 
 -----------------------
 INSTRUCTIONS TO EXECUTE
