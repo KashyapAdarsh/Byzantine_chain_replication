@@ -144,7 +144,7 @@ class Client(process):
 				self.msg_details[operation.msg_id].is_response_received == True
 				# Better to print result after verification
 				if (verify_result(self.retransmit_result[list(self.retransmit_result.keys())[0]]) is False):
-					log.error(self.INFO + "Result verification failed, need to reconfigure")
+					log.error(self.INFO + "Result verification failed for msg "+str(operation.msg_id)+", need to reconfigure")
 					return
 				else:
 					log.info(self.INFO + "Retransmission result : " + str(self.retransmit_result[list(self.retransmit_result.keys())[0]].result_proof.result))
@@ -168,12 +168,14 @@ class Client(process):
 			index += 1
 			res = pickle.loads(verify_key.verify(statement))
 
+
 			if (prev_res is not None and (prev_res.operation.type != res.operation.type or \
 				prev_res.operation.data.key != res.operation.data.key or \
 				prev_res.operation.data.value != res.operation.data.value or \
 				prev_res.operation.msg_id != res.operation.msg_id or \
 				prev_res.operation.client_id != res.operation.client_id or \
 				prev_res.result != res.result)):
+				log.info("^^^^^^^^^^^^^^^ " + str(prev_res.operation.type)+ "   "+str(res.operation.type))
 				return False
 
 			prev_res = res

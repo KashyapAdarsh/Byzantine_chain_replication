@@ -2,6 +2,7 @@ from logger import *
 from classes import *
 from constants import *
 from timer import CustomTimer
+import copy
 from util import *
 import nacl.encoding
 import nacl.hash
@@ -17,17 +18,17 @@ class Replica(process):
 		# ReplicaConfig object
 		self.config = replica_config
 		self.client_counts = dict() # <client_id, msg_count>
-		self.forward_msg_count = dict() # <client_id, forward_msg_count>
+		self.forward_msg_count = dict() # <client_id, forward_msg_count>, used for forwarded failure
 		self.shuttle_count = 0	
 		self.result_shuttle_count = 0
 		self.failure_config = None
 		self.msg_cache = dict()
-		self.forward_msg_fail = False
 		self.test = False
 		self.history = []
+		self.tamper_next_send = False # Used only during forwarded request trigger
 		self.result_cache = dict()
-		self.forward_shuttle_count = dict()
-		self.result_shuttle_count = dict()
+		self.forward_shuttle_count = dict() # Used for shuttle failure
+		self.result_shuttle_count = dict()	# Used for result_shuttle failure
 		self.HASHER = nacl.hash.sha256
 		self.INFO = "["+str(self.config.id).replace('>', "").replace('<', '')+"] "
 		log.info(INFO +"Setup complete")
@@ -62,6 +63,7 @@ class Replica(process):
 		# Case1 - result is cached
 		if (operation.msg_id in result_cache):
 			log.info(self.INFO + "Result for " + str(operation.msg_id) + " is saved, sending to client" + str(sender))
+
 			response = ResponseObject(operation.msg_id, self.result_cache[operation.msg_id].result, \
 						self.result_cache[operation.msg_id])
 
@@ -70,17 +72,6 @@ class Replica(process):
 		# Case2 - All other cases we will send request to head
 		else:
 			if (not self.config.is_head):
-				# This is for forwarded message failure injection
-				self.forward_msg_count[operation.client_id] += 1
-				if (self.failure_config is not None):
-					if (self.forward_msg_count[self.failure_config.client_id] == self.failure_config.msg_count):
-						log.info(self.INFO + "Forwarded request failure condition satisfied, asking head to inject in next shuttle.")
-						
-						# Creates a dummy failure config that will be given to head
-						failure_config = FailureConfig(self.failure_config.client_id, None, None, self.failure_config.opt_type)
-						
-						send(("trigger_forward_msg_failure", failure_config), to=self.config.head_id)
-
 				# This will start a custom timer  
 				log.info(self.INFO + "Starting retransmission timer and sending request to head for msg " \
 						+ str(operation.msg_id))
@@ -92,7 +83,10 @@ class Replica(process):
 				# If head has already seen the message, but does not have result
 				if (operation.msg_id in self.msg_cache):
 					log.info(self.INFO + "Head has already seen the msg "+ str(operation.msg_id) +", so we don't start a new shuttle. \
-						Let's wait for result shuttle to come back")
+						Let's start timer adn wait for result shuttle to come back")
+					timer = CustomTimer(float(self.config.nonhead_timeout), timer_callback, self.config.id, operation)
+					# add the timer object to msg cache of this replica
+					msg_cache[operation.msg_id] = timer
 				else:
 					# This will start a custom timer
 					log.info(self.INFO + "Head has not seen the message at all.")
@@ -199,7 +193,11 @@ class Replica(process):
 			return False
 		# If replica has received 'm' forwarded message for a particular client
 		elif (self.failure_config.shuttle_type == FORWARDED_REQUEST):
-			return forward_msg_fail
+			if(self.forward_msg_count[self.failure_config.client_id] == self.failure_config.msg_count):
+				self.forward_msg_count[self.failure_config.client_id] = -100
+				return True
+			else:
+				return False
 		# We might have to reset count here, so that someother injection 
 		# does not happen becuase of this condition
 		elif (self.failure_config.shuttle_type == SHUTTLE):
@@ -330,9 +328,7 @@ class Replica(process):
 		result_shuttle.result = result
 
 		# This is used to inject failure.
-		if ((self.failure_config is not None and is_failure_condition_satisfied(str(operation.msg_id))) \
-																	or self.forward_msg_fail is True):
-
+		if (self.failure_config is not None and is_failure_condition_satisfied(str(operation.msg_id))):
 			log.info(self.INFO + "Failure Injection condition satisfied for msg "+ str(operation.msg_id))
 			order_shuttle, result_shuttle = perform_failure_injection(order_shuttle, \
 						result_shuttle, self.config.replica_list.index(self.config.id))
@@ -359,14 +355,15 @@ class Replica(process):
 						+", sending this to" + " client before caching it")
 				self.msg_cache[result_shuttle.msg_id].stop()
 				response = ResponseObject(result_shuttle.msg_id, SUCCESS, result_shuttle)
-				if (self.config.testcase_name == "testing_retransmission"):
+				if (self.config.testcase_name == "testing_retransmission" or self.config.testcase_name == "forwarded_request"):
 					send(("result", response), to=order_shuttle.client_id)
 			
 			log.info(self.INFO + "Datastore before sending to client : " + str(self.config.data_store))
-			log.info(self.INFO + "Sending result to client " + str(order_shuttle.client_id) \
-					+ " for msg " + str(result_shuttle.msg_id))
+			#log.info(self.INFO + "Sending result to client " + str(order_shuttle.client_id) \
+			#		+ " for msg " + str(result_shuttle.msg_id))
 
-			if (self.config.testcase_name != "testing_retransmission" and self.config.testcase_name != "test_saved_cache"):
+			if (self.config.testcase_name != "testing_retransmission" and self.config.testcase_name != "test_saved_cache" \
+				and self.config.testcase_name != "forwarded_request"):
 				send(("result", response), to=order_shuttle.client_id)
 			# send result shuttle back
 
@@ -396,6 +393,23 @@ class Replica(process):
 				log.info(self.INFO + "Failure Injection condition satisfied.")
 				dummy, result_shuttle = perform_failure_injection(None, \
 						result_shuttle, self.config.replica_list.index(self.config.id))
+
+			# We have received this result shuttle as a part of reconfig, so timers are running
+			if (self.msg_cache[result_shuttle.msg_id] is not None):
+				# Stop the running timer
+				log.info(self.INFO + "Result received for retransmission for msg "+str(result_shuttle.msg_id)+", sending this to" + \
+						  " client before caching it")
+				self.msg_cache[result_shuttle.msg_id].stop()
+
+				# Trigger to tamper because of forwarded request is on, we need to screw up result
+				if (self.tamper_next_send):
+					log.info("###########"+ str(result_shuttle.msg_id))
+					dummy, result_shuttle = perform_failure_injection(None, \
+						result_shuttle, self.config.replica_list.index(self.config.id))
+					self.tamper_next_send = False
+
+				response = ResponseObject(result_shuttle.msg_id, SUCCESS, result_shuttle)
+				send(("result", response), to=result_shuttle.client_id)
 
 			# We send result back till the head.
 			if (not self.config.is_head):
@@ -447,7 +461,7 @@ class Replica(process):
 		# This checks if we are supposed to inject some failure before sending 
 		# the shuttle ahead
 
-		if ((self.failure_config is not None and is_failure_condition_satisfied(str(operation.msg_id))) or self.forward_msg_fail is True):
+		if (self.failure_config is not None and is_failure_condition_satisfied(str(operation.msg_id))):
 			log.info(self.INFO + "Failure Injection condition satisfied.")
 			order_shuttle, result_shuttle = perform_failure_injection(order_shuttle, result_shuttle, 0)
 
@@ -459,7 +473,7 @@ class Replica(process):
 		log.info(self.INFO + "Forwarding the shuttle with signed stmnts for msg "+ str(operation.msg_id) \
 				+ " to " + str(self.config.next_replica_id))
 
-		if (self.config.testcase_name == "testing_retransmission"):
+		if (self.config.testcase_name == "testing_retransmission" or self.config.testcase_name == "forwarded_request"):
 			time.sleep(10)
 
 		send(("operation", None, order_shuttle, result_shuttle), to=self.config.next_replica_id)
@@ -532,9 +546,14 @@ class Replica(process):
 		if (self.config.mode == ACTIVE):
 			# If replica is head, if we receive operation request from any replica and we already started shuttle 
 			# for this operation, we just ignore
-			if (self.config.is_head and ("Replica" in str(sender))): #and self.msg_cache[operation.msg_id] is not None):
+			if (self.config.is_head and ("Replica" in str(sender))):
+				self.forward_msg_count[self.failure_config.client_id] += 1
 				log.info(self.INFO + "Received retransmission forward from replicas")
-				pass
+
+				# To check trigger for forwarded request
+				if (self.failure_config is not None and is_failure_condition_satisfied(str(operation.msg_id))):
+					log.info(self.INFO + "Failure Injection condition satisfied for msg "+ str(operation.msg_id))
+					self.tamper_next_send = True
 			else:
 				handle_retransmission(operation=operation, sender=sender, result_shuttle=result_shuttle, \
 									order_shuttle=order_shuttle)
@@ -546,16 +565,8 @@ class Replica(process):
 
 	# This is a receiver to receive result shuttle back from tail, we cache result here
 	def receive(msg=('backward_result', result_shuttle), from_=r):
-		if (self.config.mode == ACTIVE):
-			# We have received this result shuttle as a part of reconfig, so timers are running
-			if (self.msg_cache[result_shuttle.msg_id] is not None):
-				# Stop the running timer
-				log.info(self.INFO + "Result received for retransmission, sending this to" + \
-						  " client before caching it")
-				self.msg_cache[result_shuttle.msg_id].stop()
-				response = ResponseObject(result_shuttle.msg_id, SUCCESS, result_shuttle)
-				send(("result", response), to=result_shuttle.client_id)
 
+		if (self.config.mode == ACTIVE):
 			send_result_backward(result_shuttle)
 
 	# This receives failure config if this replica is supposed to inject anything
@@ -575,12 +586,6 @@ class Replica(process):
 		log.info(self.INFO + "Received client information")
 		self.config.clients = client_info
 		init_counts()
-
-	# This is used by head for forwarded message failue injection
-	def receive(msg=('trigger_forward_msg_failure', failure_config), from_=r):
-		log.info(self.INFO + "Received request to inject failure")
-		self.forward_msg_fail = True
-		self.failure_config = failure_config
 
 	# This reveiver receives message to become immutable.
 
