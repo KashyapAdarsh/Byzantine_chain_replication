@@ -63,7 +63,7 @@ class Replica(process):
 		if (operation.msg_id in result_cache):
 			log.info(self.INFO + "Result for " + str(operation.msg_id) + " is saved, sending to client" + str(sender))
 			response = ResponseObject(operation.msg_id, self.result_cache[operation.msg_id].result, \
-						self.result_cache[operation.msg_id].statements)
+						self.result_cache[operation.msg_id])
 
 			send(("result", response), to=sender)
 
@@ -193,7 +193,8 @@ class Replica(process):
 		log.info(self.INFO + "checking if failure injection criteria is satisfied for msg " + msg)
 		if (self.failure_config.shuttle_type == CLIENT_REQUEST):
 			if (self.client_counts[self.failure_config.client_id] == self.failure_config.msg_count):
-				self.client_counts[self.failure_config.client_id] = 0
+				# Making -100 so that we dont get this condition again
+				self.client_counts[self.failure_config.client_id] = -100
 				return True
 			return False
 		# If replica has received 'm' forwarded message for a particular client
@@ -203,13 +204,13 @@ class Replica(process):
 		# does not happen becuase of this condition
 		elif (self.failure_config.shuttle_type == SHUTTLE):
 			if (self.forward_shuttle_count[self.failure_config.client_id] == self.failure_config.msg_count):
-				self.forward_shuttle_count[self.failure_config.client_id] = 0
+				self.forward_shuttle_count[self.failure_config.client_id] = -100
 				return True
 			else:
 				return False
 		elif (self.failure_config.shuttle_type == RESULT_SHUTTLE):
 			if (self.result_shuttle_count[self.failure_config.client_id] == self.failure_config.msg_count):
-				self.result_shuttle_count[self.failure_config.client_id] = 0
+				self.result_shuttle_count[self.failure_config.client_id] = -100
 				return True
 			else:
 				return False
@@ -304,6 +305,7 @@ class Replica(process):
 		# Execute the necessary operations
 		result = execute_operation(operation)
 
+		log.info(self.INFO + "Hashing the result and signing the statments for msg "+ str(operation.msg_id))
 		order_shuttle.statements.append(sign_statement(OrderStatement(slot, \
 										operation, self.config.id)))
 
@@ -357,16 +359,20 @@ class Replica(process):
 						+", sending this to" + " client before caching it")
 				self.msg_cache[result_shuttle.msg_id].stop()
 				response = ResponseObject(result_shuttle.msg_id, SUCCESS, result_shuttle)
-				#send(("result", response), to=order_shuttle.client_id)
+				if (self.config.testcase_name == "testing_retransmission"):
+					send(("result", response), to=order_shuttle.client_id)
 			
 			log.info(self.INFO + "Datastore before sending to client : " + str(self.config.data_store))
 			log.info(self.INFO + "Sending result to client " + str(order_shuttle.client_id) \
 					+ " for msg " + str(result_shuttle.msg_id))
-			send(("result", response), to=order_shuttle.client_id)
+
+			if (self.config.testcase_name != "testing_retransmission" and self.config.testcase_name != "test_saved_cache"):
+				send(("result", response), to=order_shuttle.client_id)
 			# send result shuttle back
+
 			send(("backward_result", result_shuttle), to=self.config.prev_replica_id)
 		else:
-			log.info(self.INFO + "Forwarding the shuttle to " + str(self.config.next_replica_id) \
+			log.info(self.INFO + "Forwarding the shuttle with signed stmts to " + str(self.config.next_replica_id) \
 					+ " for msg "+str(operation.msg_id))
 			send(("operation", None, order_shuttle, result_shuttle), to=self.config.next_replica_id)
 
@@ -448,10 +454,14 @@ class Replica(process):
 		# add order shuttle to current replicas history
 		history.append(order_shuttle)
 
+		log.info(self.INFO + "Hashing the result and signing the statments for msg "+ str(operation.msg_id))
 		# Same send will be used for both order and result shuttle down the chain
-		log.info(self.INFO + "Forwarding the shuttle for msg "+ str(operation.msg_id) \
+		log.info(self.INFO + "Forwarding the shuttle with signed stmnts for msg "+ str(operation.msg_id) \
 				+ " to " + str(self.config.next_replica_id))
-		#time.sleep(10)
+
+		if (self.config.testcase_name == "testing_retransmission"):
+			time.sleep(10)
+
 		send(("operation", None, order_shuttle, result_shuttle), to=self.config.next_replica_id)
 
 

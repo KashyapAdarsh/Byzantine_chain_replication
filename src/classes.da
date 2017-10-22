@@ -8,7 +8,7 @@ class data:
 # intial configurations that every replica will receive
 
 class ReplicaConfig:
-	def __init__(self, id, replica_keys, signing_key, data_store, mode, replica_list):
+	def __init__(self, id, replica_keys, signing_key, data_store, mode, replica_list, testcase_name):
 		self.id = id
 		self.head_id = None
 		self.signing_key = signing_key
@@ -23,6 +23,7 @@ class ReplicaConfig:
 		self.is_tail = False
 		self.data_store = data_store
 		self.mode = mode
+		self.testcase_name = testcase_name
 
 # Configuration object that everyclient will receive
 

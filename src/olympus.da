@@ -160,7 +160,8 @@ class Olympus(process):
 	# @arg - specific signing key, that will be sent only to this replica
 
 	def make_replica_config(id, signing_key):
-		replica_config = ReplicaConfig(id, self.verify_keys, signing_key, self.data_store, ACTIVE, self.replica_list)
+		replica_config = ReplicaConfig(id, self.verify_keys, signing_key,\
+						 self.data_store, ACTIVE, self.replica_list, self.init_config[TESTCASE_NAME])
 		return replica_config
 
 	# This method adds head and tail info for every replicaconfig object created.

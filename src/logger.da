@@ -30,4 +30,4 @@ if (len(sys.argv) > 4):
     name = name[len(name) - 1] + "_"
 '''
 
-log = setup_custom_logger("ByzantineChainReplication", "default_")
+log = setup_custom_logger("ByzantineChainReplication", "")

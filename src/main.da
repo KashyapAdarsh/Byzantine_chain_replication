@@ -115,3 +115,6 @@ def main():
 
 	# Initialize a client
 	initialize_client(config, olympus, int(config[CLIENT_COUNT]))
+
+	is_alive = False
+	await(is_alive == True)
