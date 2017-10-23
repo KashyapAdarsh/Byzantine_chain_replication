@@ -1,0 +1,241 @@
+Team : 
+	Adarsh Kashyap
+	Kanishta Agarwal
+
+Professor :
+	Scott Stoller
+CSE535 Course Project - Byzantine Chain Replication Implementation [http://www.cs.cornell.edu/~ns672/publications/2012OPODIS.pdf]
+
+Team : 
+	Adarsh Kashyap
+	Kanishta Agarwal
+
+Professor :
+	Scott Stoller
+
+In order to test multiple scenario's for our code we have written seperate config files
+
+NOTE : Most of the testcases check for things like order proof verification, result proof verification, signing the statements and
+	   hashing the results. So we do not have any specific test case to test them.
+
+----------
+Scenario 1 - All working case
+----------
+	default.config : This is the default config if we do not specify any command line arguments
+
+	Details :
+		Number of clients : 3
+		No of replicas	  : 3 [t = 1]
+		One replica and one client per node.
+		Failure injection : None
+
+	Example command to use this testcase :
+
+		python -m da --message-buffer-size 640000 -n main main.da [ In main termainal, see README for complete execution commands]
+
+	Result :
+		No errors of failures and all operations will be executed properly.
+
+----------
+Scenario 2	- All working case
+----------
+	default_t2.config : This is to test if our system works for more replicas
+
+	Details :
+		Number of clients : 3
+		No of replicas	  : 5 [t = 2]
+		One replica and one client per node.
+		Failure injection : None
+
+	Example command to use this testcase :
+
+		python -m da --message-buffer-size 640000 -n main main.da ../config/default_t2.config
+
+	Result :
+		No errors of failures and all operations will be executed properly.
+
+
+----------
+Scenario 3	- Stress test
+----------
+	stress_test.config : This testcase is a stress test for our system
+
+	Details :
+		Number of clients : 20
+		No of replicas	  : 11 [t = 5]
+		Total number of messages : More than 300
+		Replicas and clients are randonly spread across 3 nodes.
+		Failure injection : None
+
+	Example command to use this testcase :
+
+		python -m da --message-buffer-size 640000 -n main main.da ../config/stress_test.config
+
+	Result :
+		No failures and all operations will be executed properly.
+		There might be some errors with client verification at the end of testcase since clients are not 
+		independent and might have modified each others data.
+
+
+----------
+Scneario 4	- Retransmission test - 1 
+----------
+	test_saved_cache.config : In this we test a scenario when client times out and requests all replicas,
+							  now replicas will have this result cached, so everyone responds directly to client directly.
+
+	details :
+		Number of clients : 1
+		No of replicas	  : 3 [t = 1]
+		Replicas and clients are randomly spread across 3 nodes.
+		Failure injection : None
+		Client timeout	  : 8 seconds
+		Other changes	  : To test this we stop tail from sending response to client.
+
+	Example command to use this testcase :
+
+		python -m da --message-buffer-size 640000 -n main main.da ../config/test_saved_cache.config
+
+	Result : 
+		All clients will receive result for all operations as a part of retransmission, can verify from logs that 
+		saved cache is sent from replicas
+
+----------
+Scenario 5	- Retransmission test - 2
+----------
+	head_msg_seen.config : In this testcase we test a scenario where client timesout and retransmits operation to all replicas,
+						   in this case we make sure non of the replicas have result cached, so everyone forwards it to head and starts
+						   timer, now that head has already seen the msg it will not start a new shuttle, but just start a timer and wait 
+						   for result shuttle to come back. While the shuttle is coming back all the replicas who have started timer will
+						   cache it and also send repsonse to client.
+
+	details :
+		Number of clients : 1
+		No of replicas	  : 3 [t = 1]
+		Replicas and clients are randomly spread across 3 nodes.
+		Failure injection : None
+		Client timeout	  : 8 seconds
+		Other changes	  : To test this we sleep the shuttle that is going down the chain untill client timesout.
+
+	Example command to use this testcase :
+
+		python -m da --message-buffer-size 640000 -n main main.da ../config/test_saved_cache.config
+
+	Result : 
+		From logs we can verify that head receives forwards from replicas, now since head has seen the msg_id
+		it will just start timer and wait for result shuttle. while result shuttle is coming back everyone will
+		send result to client directly.
+
+----------
+Scenario 6	- Failure - 1
+----------
+	result_shuttle_drop.config : This testcase is used to test result_shuttle trigger and drop_result_stmt operation.
+
+	Details :
+		Number of clients : 1
+		No of replicas	  : 3 [t = 1]
+		Replicas and clients are randonly spread across 3 nodes.
+		Failure injection : result_shuttle
+		Failure operation : drop head statement
+
+	Example command to use this testcase :
+
+		python -m da --message-buffer-size 640000 -n main main.da ../config/stress_test.config
+
+	Result :
+		Soon after we receive 'm' result shuttle, from the replica 'r' we drop head statement and the replica before
+		that will identify this, also if we perform this in tail then even client will identify that something is wrong.
+		Logs can be followed easily to undestand the same.
+
+----------
+Scenario 7	- Failure - 2
+----------
+	shuttle_drop.config : This testcase is used to test shuttle trigger and drop_result_stmt operation. When we receive 'm' shuttle from a client 'c'
+						  we trigger this.
+
+	Details :
+		Number of clients : 1
+		No of replicas	  : 3 [t = 1]
+		Replicas and clients are randonly spread across 3 nodes.
+		Failure injection : shuttle
+		Failure operation : drop head statement
+
+	Example command to use this testcase :
+
+		python -m da --message-buffer-size 640000 -n main main.da ../config/stress_test.config
+
+	Result :
+		Soon after we receive 'm'th shuttle, from the replica 'r' we drop head statement and the replica before
+		that will identify this, also if we perform this in tail then even client will identify that something is wrong.
+		Logs can be followed easily to undestand the same.
+
+
+----------
+Scenario 8	- Failure - 3
+----------
+	result_shuttle_change_result.config : This test case is used to test result_shuttle trigger and change_result operation.
+
+	Details :
+		Number of clients : 1
+		No of replicas	  : 3 [t = 1]
+		Replicas and clients are randonly spread across 3 nodes.
+		Failure injection : resut_shuttle
+		Failure operation : change_result
+
+	Result : 
+		Soon after we receive 'm'th result shuttle, from the replica 'r' we perform change result statement [to hash(OK)]and the replica before
+		that will identify this, also if we perform this in tail then even client will identify that something is wrong.
+		Logs can be followed easily to undestand the same.
+
+----------
+Scenario 9	- Failure - 4
+----------
+	client_request_change_operation.config : This test case is used to client_request trigger with change operation.
+
+	Details :
+		Number of clients : 1
+		No of replicas	  : 3 [t = 1]
+		Replicas and clients are randonly spread across 3 nodes.
+		Failure injection : client_request
+		Failure operation : change_operation
+
+	Result : 
+		Soon after we receive 'm'th client request from a client 'c', from the replica 'r' we perform change operation in order statement [to get(X)]and the replica after that will identify this issue. Logs can be used to identify this.
+
+-----------
+Scenario 10 - Failure 5
+-----------
+
+	forward_msg.config : This test case is used to test forward_message trigger and change_operataion operation. Here if head recives 'm'
+						 forwarded message, we mess up the next request head gets.
+
+	Details :
+		Number of clients : 1
+		No of replicas	  : 3 [t = 1]
+		Replicas and clients are randonly spread across 3 nodes.
+		Failure injection : forward_message
+		Failure operation : change_operation
+
+	Result : 
+		Soon after we receive 'm'th forward from replcias, head will note this down and we perform change operation in next operation i.e. order statement [to get(X)]and the replica after that will identify this issue. Logs can be used to identify this.
+
+-----------
+Scenario 11 - Failure 6
+-----------
+
+	shuttle_change_result.config : This test case is used to test shuttle trigger and change_result operation.
+
+	Details :
+		Number of clients : 1
+		No of replicas	  : 3 [t = 1]
+		Replicas and clients are randonly spread across 3 nodes.
+		Failure injection : shuttle
+		Failure operation : change_result
+
+	Result : 
+		Soon after we receive 'm'th result shuttle, from the replica we perform change result statement [to hash(OK)]and the replica before
+		that will identify this, also if we perform this in tail then even client will identify that something is wrong.
+		Logs can be followed easily to undestand the same.
+
+We have two more configs which are other combination of triggers and operations.
+
+Thank you
