@@ -134,7 +134,7 @@ These are certain bugs and limitations that we have for the current implementati
 3)	We have currently tested our system only on multiple nodes within the same host, we have not tried connecting
 	multiple host[computer's or VM's]
 4)	Our code does not generate seperate log files for seperate configurations, it overwrites old log files if any.
-5)	
+5)	Our implementation requires that config file has node details for replica and clients seperated by ';'
 
 -------------
 CONTRIBUTIONS

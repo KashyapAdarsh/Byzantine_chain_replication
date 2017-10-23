@@ -28,11 +28,12 @@ class ReplicaConfig:
 # Configuration object that everyclient will receive
 
 class ClientConfig:
-	def __init__(self, replicas, replica_list):
+	def __init__(self, replicas, replica_list, tolerance):
 		self.replicas = replicas
 		self.replica_list = replica_list
 		self.head_id = None
 		self.tail_id = None
+		self.t = tolerance
 
 class Operation:
 	def __init__(self, operation_type, msg_id, data, client_id):

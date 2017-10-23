@@ -12,6 +12,7 @@ import uuid
 class Client(process):
 	def setup(olympus, id, init_config, work_load):
 		self.client_id = id
+		self.tolerance = 0
 		self.signing_key = None
 		self.work_load = work_load
 		self.current_work_load = 0
@@ -158,11 +159,14 @@ class Client(process):
 		index = 0
 		prev_res = None
 
-		# Verify result should have statement from all replicas
-		if (len(response.result_proof.statements) != len(self.replica_keys)):
+		# Verify result should have statement from atleast t+1 replicas.
+		if (len(response.result_proof.statements) < self.tolerance + 1):
 			return False
 
+		total_found = 0
+
 		for statement in response.result_proof.statements:
+
 			verify_key = nacl.signing.VerifyKey(self.replica_keys[self.replica_list[index]], \
 												encoder=nacl.encoding.HexEncoder)
 			index += 1
@@ -175,10 +179,20 @@ class Client(process):
 				prev_res.operation.msg_id != res.operation.msg_id or \
 				prev_res.operation.client_id != res.operation.client_id or \
 				prev_res.result != res.result)):
-				log.info("^^^^^^^^^^^^^^^ " + str(prev_res.operation.type)+ "   "+str(res.operation.type))
-				return False
+				continue
+
+			total_found += 1
+
+			if (total_found == (self.tolerance + 1)):
+				log.info(self.INFO + "Valid t+1 found.")
+				log.info(self.INFO + "Verification of result for msg "+str(response.msg_id)+" succesful.")
+				return True
 
 			prev_res = res
+
+		if (total_found < (self.tolerance + 1)):
+				log.info(self.INFO + "Valid t+1 is not found.")
+				return False
 
 		log.info(self.INFO + "Verification of result for msg "+str(response.msg_id)+" succesful.")
 		return True
@@ -235,6 +249,7 @@ class Client(process):
 		self.replica_tail = config.tail_id
 		self.replica_keys = config.replicas
 		self.replica_list = config.replica_list
+		self = config.t
 
 	# Receiver for result in client.
 	# This has to verify the result and stuff

@@ -192,7 +192,7 @@ class Olympus(process):
 
 	# This method will send required details to the client
 	def send_client_config(client):
-		conf = ClientConfig(self.verify_keys, self.replica_list)
+		conf = ClientConfig(self.verify_keys, self.replica_list, int(self.init_config[TOLERENCE]))
 		conf.head_id = self.head
 		conf.tail_id = self.tail
 		log.info(self.INFO + "Sending replica details to client " + str(client))
