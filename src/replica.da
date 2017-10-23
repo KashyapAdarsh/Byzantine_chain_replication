@@ -401,14 +401,6 @@ class Replica(process):
 						  " client before caching it")
 				self.msg_cache[result_shuttle.msg_id].stop()
 
-				'''
-				# Trigger to tamper because of forwarded request is on, we need to screw up result
-				if (self.tamper_next_send):
-					log.info("###########"+ str(result_shuttle.msg_id))
-					dummy, result_shuttle = perform_failure_injection(None, \
-						result_shuttle, self.config.replica_list.index(self.config.id))
-					self.tamper_next_send = False
-				'''
 				response = ResponseObject(result_shuttle.msg_id, SUCCESS, result_shuttle)
 				send(("result", response), to=result_shuttle.client_id)
 
@@ -510,7 +502,6 @@ class Replica(process):
 				return NOT_PRESENT
 			else:
 				return self.config.data_store[operation.data.value]
-
 		else:
 			return ERROR
 
