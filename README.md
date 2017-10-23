@@ -97,6 +97,24 @@ steps :
    	Now once all terminals are started our program will execute the above specified config file and logs
    	will ge generted in log folder as log.txt.
 
+
+NOTE : If we are running using multiple hosts then we need to do this :
+
+Start olympus : python -m da --message-buffer-size 640000 -n Node_olympus -H 172.24.20.43 main.da
+
+start in other terminals : 
+
+python -m da --message-buffer-size 640000 -n Node0 -H 172.24.20.43 -R 172.24.21.98 -D main.da
+
+python -m da --message-buffer-size 640000 -n Node1 -H 172.24.20.43 -R 172.24.21.98 -D main.da
+
+python -m da --message-buffer-size 640000 -n Node2 -H 172.24.20.43 -R 172.24.21.98 -D main.da
+
+-H : host IP
+-R : olympus IP
+
+We can show this during demo.
+
 -------------------
 WORKLOAD GENERATION
 -------------------
@@ -132,7 +150,7 @@ These are certain bugs and limitations that we have for the current implementati
 2)	Everytime our replica or client recognizes some issue with order or result proofs we just log that info saying
 	we need to reconfigure and retrun by making replicas immutable.
 3)	We have currently tested our system only on multiple nodes within the same host, we have not tried connecting
-	multiple host[computer's or VM's]
+	multiple host[computer's or VM's]. But it can run using multiple hosts as well.
 4)	Our code does not generate seperate log files for seperate configurations, it overwrites old log files if any.
 5)	Our implementation requires that config file has node details for replica and clients seperated by ';'
 
