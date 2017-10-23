@@ -34,11 +34,11 @@ Version - ‘Python 3.5.2’
 FILES
 -----
 
-	Olympus :	~/Byzantine_chain_replication/src/olympus.da
-	Clients :	~/Byzantine_chain_replication/src/client.da
-	Replicas:	~/Byzantine_chain_replication/src/replica.da
-	Configs	:	~/Byzantine_chain_replication/configs
-	Logs 	:	~/Byzantine_chain_replication/logs
+	Olympus : ~/Byzantine_chain_replication/src/olympus.da
+	Clients : ~/Byzantine_chain_replication/src/client.da
+	Replicas: ~/Byzantine_chain_replication/src/replica.da
+	Configs : ~/Byzantine_chain_replication/configs
+	Logs 	  : ~/Byzantine_chain_replication/logs
 
 -----------------------
 INSTRUCTIONS TO EXECUTE
@@ -81,18 +81,18 @@ steps :
 
    		Terminal-1 : 
 
-   			Navigate to src folder 	-  cd ~/Byzantine_chain_replication/src
-   			Start the Node 			-  python -m da --message-buffer-size 640000 -n Node0 -D main.da
+   			Navigate to src folder :  cd ~/Byzantine_chain_replication/src
+   			Start the Node :  python -m da --message-buffer-size 640000 -n Node0 -D main.da
 
    		Terminal-2 : 
 
-   			Navigate to src folder 	-  cd ~/Byzantine_chain_replication/src
-   			Start the Node 			-  python -m da --message-buffer-size 640000 -n Node1 -D main.da
+   			Navigate to src folder :  cd ~/Byzantine_chain_replication/src
+   			Start the Node :  python -m da --message-buffer-size 640000 -n Node1 -D main.da
 
    		Terminal-3 : 
 
-   			Navigate to src folder 	-  cd ~/Byzantine_chain_replication/src
-   			Start the Node 			-  python -m da --message-buffer-size 640000 -n Node2 -D main.da
+   			Navigate to src folder :  cd ~/Byzantine_chain_replication/src
+   			Start the Node :  python -m da --message-buffer-size 640000 -n Node2 -D main.da
 
    	Now once all terminals are started our program will execute the above specified config file and logs
    	will ge generted in log folder as log.txt.
@@ -192,9 +192,9 @@ dictionary comprehensions - 16
 
 Distalgo features :
 
-1)  send 	- To send message between nodes
-2)  Receive	- Receive handlers to receive the messages
-3)  await	- Awaits to wait for necessary condition
+1) send 	- To send message between nodes
+2) receive	- receive handlers to receive the messages
+3) await	- Awaits to wait for necessary condition
 4)	timeout	- To check if a particular operation timedout
 5)	setup	- To setup an instance of any class
 

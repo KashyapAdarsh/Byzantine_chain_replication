@@ -82,8 +82,8 @@ class Replica(process):
 			else:
 				# If head has already seen the message, but does not have result
 				if (operation.msg_id in self.msg_cache):
-					log.info(self.INFO + "Head has already seen the msg "+ str(operation.msg_id) +", so we don't start a new shuttle. \
-						Let's start timer adn wait for result shuttle to come back")
+					log.info(self.INFO + "Head has already seen the msg "+ str(operation.msg_id) +
+						", so we don't start a new shuttle. Let's start timer andW wait for result shuttle to come back")
 					timer = CustomTimer(float(self.config.nonhead_timeout), timer_callback, self.config.id, operation)
 					# add the timer object to msg cache of this replica
 					msg_cache[operation.msg_id] = timer
@@ -359,8 +359,8 @@ class Replica(process):
 					send(("result", response), to=order_shuttle.client_id)
 			
 			log.info(self.INFO + "Datastore before sending to client : " + str(self.config.data_store))
-			#log.info(self.INFO + "Sending result to client " + str(order_shuttle.client_id) \
-			#		+ " for msg " + str(result_shuttle.msg_id))
+			log.info(self.INFO + "Sending result to client " + str(order_shuttle.client_id) \
+					+ " for msg " + str(result_shuttle.msg_id))
 
 			if (self.config.testcase_name != "testing_retransmission" and self.config.testcase_name != "test_saved_cache" \
 				and self.config.testcase_name != "forwarded_request"):
@@ -401,13 +401,14 @@ class Replica(process):
 						  " client before caching it")
 				self.msg_cache[result_shuttle.msg_id].stop()
 
+				'''
 				# Trigger to tamper because of forwarded request is on, we need to screw up result
 				if (self.tamper_next_send):
 					log.info("###########"+ str(result_shuttle.msg_id))
 					dummy, result_shuttle = perform_failure_injection(None, \
 						result_shuttle, self.config.replica_list.index(self.config.id))
 					self.tamper_next_send = False
-
+				'''
 				response = ResponseObject(result_shuttle.msg_id, SUCCESS, result_shuttle)
 				send(("result", response), to=result_shuttle.client_id)
 
@@ -461,7 +462,8 @@ class Replica(process):
 		# This checks if we are supposed to inject some failure before sending 
 		# the shuttle ahead
 
-		if (self.failure_config is not None and is_failure_condition_satisfied(str(operation.msg_id))):
+		if ((self.failure_config is not None and is_failure_condition_satisfied(str(operation.msg_id))\
+			or self.tamper_next_send == True)):
 			log.info(self.INFO + "Failure Injection condition satisfied.")
 			order_shuttle, result_shuttle = perform_failure_injection(order_shuttle, result_shuttle, 0)
 
