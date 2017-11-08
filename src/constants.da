@@ -18,6 +18,7 @@ PUT = "put"
 SLICE = "slice"
 GET = "get"
 APPEND = "append"
+CONFIG_CHECK_INTERVAL = 5
 
 # Constants for modes used by replicas
 

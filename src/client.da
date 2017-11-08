@@ -2,6 +2,7 @@ from logger import *
 from classes import *
 from constants import *
 from olympus import Olympus
+from timer import CustomTimer
 import time
 import sys
 import pickle
@@ -18,6 +19,7 @@ class Client(process):
 		self.current_work_load = 0
 		self.msg_details = dict()
 		self.replica_head = None
+		self.active_config = None
 		self.replica_tail = None
 		self.replica_keys = None
 		self.verify_key = None
@@ -26,6 +28,7 @@ class Client(process):
 		self.olympus = olympus
 		self.data_store = dict()
 		self.retransmit_result = dict()
+		self.config_timer = None
 		self.head_data_store = dict()
 		self.timeout = float(init_config[CLIENT_TIMEOUT])
 		self.INFO = "["+str(self.client_id).replace('>', "").replace('<', '')+"] "
@@ -46,7 +49,11 @@ class Client(process):
 
 		await(self.replicas_ready == True)
 
+		# Start checking of config is changed at intervals
+		self.config_timer = CustomTimer(float(CONFIG_CHECK_INTERVAL), check_config_change)
+
 		for load in work_load:
+			time.sleep(2)
 			msg_id = uuid.uuid4()
 			operation = make_operation(msg_id, load)
 			if (operation == None):
@@ -67,6 +74,12 @@ class Client(process):
 		else:
 			log.error(self.INFO + "Verification of the datastore failed.")
 
+		self.config_timer.stop()
+
+
+	def check_config_change():
+		log.info(self.INFO + "Contacting olympus to check if config is changed.")
+		send(("is_config_changed", self.active_config), to=self.olympus)
 
 	#After all work load is processed, this method checks that dictionary contains expected content at end of test case
 
@@ -284,5 +297,13 @@ class Client(process):
 		log.info(self.INFO + "head_data_store receieved from head")
 		self.head_data_store = head_data_store
 
-	def receive(msg=("replicas_ready"), from_=o):
+	def receive(msg=("replicas_ready", active_config), from_=o):
+		self.active_config = active_config
+		log.info(self.INFO + " Current active config : " + str(self.active_config))
 		self.replicas_ready = True
+
+	def receive(msg=("config_change_result", result), from_=o):
+		if (result == True):
+			log.info(self.INFO + "Configration has been changed, need to resend pending requests to new head.")
+		else:
+			log.info(self.INFO + "Configuration is not changed.")

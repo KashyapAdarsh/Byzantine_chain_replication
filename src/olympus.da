@@ -44,22 +44,21 @@ class Olympus(process):
 
 		await(len(self.clients) == self.no_of_clients)
 
-		#print("await passed")
-
 		# Sends client info to everyone
 		for replica in self.replica_list:
 			send(("client_details", self.clients), to=replica)
 
-		#print("Sent client details to replicas")
-
+		# Tell clients that replicas are ready and also send current 
+		# active configuration details.
 		for client in self.client_list:
-			#print(client)
-			send(("replicas_ready"),to=client)
-
-		#print("Sent replica ready")
+			send(("replicas_ready", active_config),to=client)
 
 		# Send fault injection to everyone
 		send_fault_injection()
+
+		# We need to keep olympus alive
+		is_alive = False
+		await(is_alive == True)
 
 	def make_new_replica():
 		config_id = uuid.uuid4()
@@ -207,3 +206,11 @@ class Olympus(process):
 		self.client_list.append(client_id)
 		await(self.all_replicas_spawned == True)
 		send_client_config(c)
+
+	def receive(msg=("is_config_changed", config_id), from_=c):
+		log.info(self.INFO + "Received config change check request from client " + str(c))
+		is_changed = False
+		if (self.active_config != config_id):
+			is_changed = True
+
+		send(("config_change_result", is_changed), to=c)
