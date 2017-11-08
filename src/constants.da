@@ -28,6 +28,7 @@ FAIL = "FAIL"
 NOT_PRESENT = ""
 SUCCESS = "success"
 ERROR = "error"
+CHECKPOINT_NUM = 5
 
 # constants used for error injection
 CLIENT_REQUEST = "client_request"

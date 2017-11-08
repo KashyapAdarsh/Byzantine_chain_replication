@@ -163,6 +163,7 @@ class Client(process):
 		if (len(response.result_proof.statements) < self.tolerance + 1):
 			return False
 
+
 		total_found = 0
 
 		for statement in response.result_proof.statements:
@@ -182,6 +183,8 @@ class Client(process):
 				continue
 
 			total_found += 1
+
+			# print("msg_ID : ",response.msg_id, "***********", res.result)
 
 			if (total_found == (self.tolerance + 1)):
 				log.info(self.INFO + "Valid t+1 found.")

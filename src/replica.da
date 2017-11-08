@@ -25,6 +25,7 @@ class Replica(process):
 		self.msg_cache = dict()
 		self.test = False
 		self.history = []
+		self.checkpoint = []
 		self.tamper_next_send = False # Used only during forwarded request trigger
 		self.result_cache = dict()
 		self.forward_shuttle_count = dict() # Used for shuttle failure
@@ -114,10 +115,65 @@ class Replica(process):
 			# Case when replica is a head
 			if (self.config.is_head):
 				print_opt(operation)
+
 				send_new_shuttle(operation, sender)
+
+				# Checks if checkpoint has to be initiated.
+				if (get_current_slot() % CHECKPOINT_NUM == 0):
+					log.info(self.INFO + "Checkpoint criteria satisfied.")
+					# We intentionally send one less to truncate
+					start_checkpoint_shuttle(get_current_slot() - 1)
+
 			# For any other case
 			else:
 				forward_shuttle(sender, result_shuttle, order_shuttle)
+
+
+	def start_checkpoint_shuttle(slot):
+		log.info(self.INFO + "Starting checkpoint shuttle.")
+		checkpoint_shuttle = CheckpointShuttle(slot)
+
+		log.info(self.INFO + "Adding the hash of the datastore to the checkpoint proof")
+		checkpoint_shuttle.statements.append(CheckpointStatement(hash(self.config.data_store)))
+
+		send(("checkpoint_forward", checkpoint_shuttle), to=self.config.next_replica_id)
+
+
+	def handle_checkpoint(type, checkpoint_shuttle):
+		if (self.config.mode == ACTIVE):
+			if (type == "forward"):
+				log.info(self.INFO + "Adding the hash of the datastore to the checkpoint proof")
+				checkpoint_shuttle.statements.append(CheckpointStatement(hash(self.config.data_store)))
+				# If Not tail then keep sending it ahead
+				if (not self.config.is_tail):
+					send(("checkpoint_forward", checkpoint_shuttle), to=self.config.next_replica_id)
+				else:
+					process_checkpoint(checkpoint_shuttle)
+					send(("checkpoint_reverse", checkpoint_shuttle), to=self.config.prev_replica_id)
+			else:
+				process_checkpoint(checkpoint_shuttle)
+				if (not self.config.is_head):
+					send(("checkpoint_reverse", checkpoint_shuttle), to=self.config.prev_replica_id)
+
+	# This method processes the checkpoint, it does the following:
+	# 1) Saves the checkpoint info
+	# 2) Truncates the history
+
+	def process_checkpoint(checkpoint_shuttle):
+		
+		# Truncating the history
+		slot_to_truncate = checkpoint_shuttle.slot
+		log.info(self.INFO + "Truncating the history till slot : " + str(slot_to_truncate))
+
+		# Saving the checkpoint details
+		self.checkpoint.append(checkpoint_shuttle)
+
+		# Truncating the history of the checkpoint
+		for item in self.history[:]:
+			if (item.slot <= slot_to_truncate):
+				self.history.remove(item)
+			else:
+				break
 
 	# Helper to print		
 	def print_opt(operation):
@@ -334,7 +390,7 @@ class Replica(process):
 						result_shuttle, self.config.replica_list.index(self.config.id))
 
 		# add order shuttle to current replicas history
-		history.append(order_shuttle)
+		self.history.append(order_shuttle)
 
 		# We have to send result to client and start result shuttle message
 		# backwards if it is a tail, else just forward the shuttle.
@@ -429,6 +485,8 @@ class Replica(process):
 	def send_new_shuttle(operation, client):
 		slot = get_next_slot()
 
+		log.info(self.INFO + "slot number : " + str(slot))
+
 		# If entry is already there then its retransmission and timer is started already
 		if (operation.msg_id not in msg_cache):
 			self.msg_cache[operation.msg_id] = None
@@ -460,7 +518,7 @@ class Replica(process):
 			order_shuttle, result_shuttle = perform_failure_injection(order_shuttle, result_shuttle, 0)
 
 		# add order shuttle to current replicas history
-		history.append(order_shuttle)
+		self.history.append(order_shuttle)
 
 		log.info(self.INFO + "Hashing the result and signing the statments for msg "+ str(operation.msg_id))
 		# Same send will be used for both order and result shuttle down the chain
@@ -593,3 +651,11 @@ class Replica(process):
 		log.info(self.INFO + "Received data_store query from client " + str(client))
 		send(("head_data_store", self.config.data_store), to=client)
 		log.info(self.INFO + "Sent data_store to requesting client " + str(client))
+
+	def receive(msg=("checkpoint_forward", checkpoint_shuttle), from_=r):
+		log.info(self.INFO + "Received checkpoint shuttle from " + str(r))
+		handle_checkpoint("forward", checkpoint_shuttle)
+
+	def receive(msg=("checkpoint_reverse", checkpoint_shuttle), from_=r):
+		log.info(self.INFO + "Received checkpoint shuttle from " + str(r))
+		handle_checkpoint("reverse", checkpoint_shuttle)
