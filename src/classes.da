@@ -100,3 +100,9 @@ class CheckpointShuttle:
 class CheckpointStatement:
 	def __init__(self, hashed_data):
 		self.hashed_data = hashed_data
+
+class wedgedData:
+	def __init__(self, id, hist, checkpoint):
+		self.replica_id = id
+		self.history = hist
+		self.checkpoint = checkpoint

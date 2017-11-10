@@ -26,6 +26,7 @@ class Replica(process):
 		self.test = False
 		self.history = []
 		self.checkpoint = []
+		self.olympus = None
 		self.tamper_next_send = False # Used only during forwarded request trigger
 		self.result_cache = dict()
 		self.forward_shuttle_count = dict() # Used for shuttle failure
@@ -104,9 +105,9 @@ class Replica(process):
 	def timer_callback(id, operation):
 		log.error(self.INFO +  "TIME OUT for replica " + str(id) + " for msg"+ str(operation.msg_id) \
 				+", requesting olympus to reconfigure")
-		send_immutable_msg()		
 		msg_cache[operation.msg_id].stop()
-
+		notify_olympus(None)	
+		
 	# This method handles sending order shuttle down the chain
 	# Here we have multiple cases based on if the replica is HEAD or Normal replicas
 
@@ -130,13 +131,14 @@ class Replica(process):
 
 
 	def start_checkpoint_shuttle(slot):
-		log.info(self.INFO + "Starting checkpoint shuttle.")
-		checkpoint_shuttle = CheckpointShuttle(slot)
+		if (self.config.mode == ACTIVE):
+			log.info(self.INFO + "Starting checkpoint shuttle.")
+			checkpoint_shuttle = CheckpointShuttle(slot)
 
-		log.info(self.INFO + "Adding the hash of the datastore to the checkpoint proof")
-		checkpoint_shuttle.statements.append(CheckpointStatement(hash(self.config.data_store)))
+			log.info(self.INFO + "Adding the hash of the datastore to the checkpoint proof")
+			checkpoint_shuttle.statements.append(CheckpointStatement(hash(self.config.data_store)))
 
-		send(("checkpoint_forward", checkpoint_shuttle), to=self.config.next_replica_id)
+			send(("checkpoint_forward", checkpoint_shuttle), to=self.config.next_replica_id)
 
 
 	def handle_checkpoint(type, checkpoint_shuttle):
@@ -166,6 +168,7 @@ class Replica(process):
 		log.info(self.INFO + "Truncating the history till slot : " + str(slot_to_truncate))
 
 		# Saving the checkpoint details
+		log.info(self.INFO + "Saving the checkpoint information.")
 		self.checkpoint.append(checkpoint_shuttle)
 
 		# Truncating the history of the checkpoint
@@ -329,9 +332,8 @@ class Replica(process):
 		return order_shuttle, result_shuttle
 
 	# This method currently sends a message to all replicas asking them to become immutable.
-	def send_immutable_msg():
-		for replica in self.config.replica_list:
-			send(("become_immutable"), to=replica)
+	def notify_olympus(proof):
+		send(("reconfigure", None), to=self.olympus)
 
 	# This method will be used by replicas, to add its details and send the 
 	# result
@@ -367,7 +369,7 @@ class Replica(process):
 		if (verify_shuttle(order_shuttle, "order_proof") == False):
 			log.error(self.INFO + "Order shuttle verification failed for msg "+ str(operation.msg_id)\
 					+", we need to ask olympus to reconfigure")
-			send_immutable_msg()
+			notify_olympus(order_shuttle)
 			return
 
 		result_shuttle.statements.append(sign_statement(ResultStatement(hash(result), \
@@ -377,7 +379,7 @@ class Replica(process):
 		if (verify_shuttle(result_shuttle, "result_proof") == False):
 			log.error(self.INFO + "Result shuttle verification failed msg "+ str(operation.msg_id)\
 					+ ", we need to ask olympus to reconfigure")
-			send_immutable_msg()
+			notify_olympus(result_shuttle)
 			return
 
 		# Unhashed result
@@ -466,7 +468,7 @@ class Replica(process):
 		else:
 			log.error(self.INFO + "Result shuttle verification failed for msg "+ str(result_shuttle.msg_id) \
 					+", we need to request olympus to reconfigure")
-			send_immutable_msg()
+			notify_olympus(result_shuttle)
 			return
 
 	# Helper to sign the statements that we receive
@@ -636,6 +638,9 @@ class Replica(process):
 	def receive(msg=('client_details', client_info), from_=o):
 		log.info(self.INFO + "Received client information")
 		self.config.clients = client_info
+		# Save the olympus info
+		self.olympus = o
+		log.info(self.INFO + "Olympus info registered : " + str(self.olympus))
 		init_counts()
 
 	# This reveiver receives message to become immutable.
@@ -653,9 +658,23 @@ class Replica(process):
 		log.info(self.INFO + "Sent data_store to requesting client " + str(client))
 
 	def receive(msg=("checkpoint_forward", checkpoint_shuttle), from_=r):
-		log.info(self.INFO + "Received checkpoint shuttle from " + str(r))
-		handle_checkpoint("forward", checkpoint_shuttle)
+		if (self.config.mode == ACTIVE):
+			log.info(self.INFO + "Received checkpoint shuttle from " + str(r))
+			handle_checkpoint("forward", checkpoint_shuttle)
 
 	def receive(msg=("checkpoint_reverse", checkpoint_shuttle), from_=r):
-		log.info(self.INFO + "Received checkpoint shuttle from " + str(r))
-		handle_checkpoint("reverse", checkpoint_shuttle)
+		if (self.config.mode == ACTIVE):
+			log.info(self.INFO + "Received checkpoint shuttle from " + str(r))
+			handle_checkpoint("reverse", checkpoint_shuttle)
+
+	# Receive request from olympus to get wedged data, this also makes the replica
+	# immutable.
+	def receive(msg=("wedged"), from_=o):
+		log.info(self.INFO + "Received reconfig command from olympus, making wedged data and sending it to olympus.")
+		wedged_data = wedgedData(self.config.id, self.history, self.checkpoint)
+		# TODO - signing the wedged_data
+		#wedged_data = sign_statement(wedged_data)
+
+		send(("wedged_data", wedged_data), to=self.olympus)
+		log.info(self.INFO + "State changed to immutable.")
+		self.config.mode = IMMUTABLE

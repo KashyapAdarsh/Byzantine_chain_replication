@@ -5,8 +5,11 @@ from replica import Replica
 import uuid
 import time
 import sys
+import nacl.hash
 import nacl.encoding
 import nacl.signing
+import pickle
+from itertools import combinations
 
 class Olympus(process):
 
@@ -24,6 +27,7 @@ class Olympus(process):
 		self.active_config = None
 		self.wedged_data = dict()
 		self.data_store = dict()
+		self.quorums = set()
 		self.head_timeout = init_config[HEAD_TIMEOUT]
 		self.nonhead_timeout = init_config[NONHEAD_TIMEOUT]
 		self.head = None
@@ -32,6 +36,7 @@ class Olympus(process):
 		self.no_of_clients = float(init_config[CLIENT_COUNT])
 		self.all_replicas_spawned = False
 		self.privateKey = None
+		self.HASHER = nacl.hash.sha256
 		self.INFO = "[OLYMPUS] "
 		log.info(self.INFO + "Olympus setup complete, assigned ID :" + str(self.olympus_id))
 
@@ -189,6 +194,107 @@ class Olympus(process):
 
 		return replica_config
 
+	def hash(result):
+		digest = self.HASHER(pickle.dumps(result), encoder=nacl.encoding.HexEncoder)
+		return digest
+
+	def is_valid_quorum(quorum):
+		log.info(self.INFO + "Replicas in current quorum :  " + str(quorum))
+
+		# Lets check if checkpoint is same for all replicas in the list.
+		# This can be optimized by identifying replica with issue and taking quorum that 
+		# does not contain this replica.
+		temp = dict() # Contains slot and freq.
+		log.info(self.INFO + "Checking if checkpoint details are consistent.")
+		for replica in quorum:
+			for entry in self.wedged_data[replica].checkpoint:
+				if (entry.slot in temp):
+					temp[entry.slot] += 1
+				else:
+					temp[entry.slot] = 1
+
+		print("checkpoint map : ", temp)
+
+		# Meaning no checkpoint has happened before reconfig if len == 0
+		if (len(temp) != 0 and len(set(temp.values()))!=1):
+			log.info(self.INFO + "quorum validity failed, checkpoint is not consistent")
+			return False, None, None
+
+		log.info(self.INFO + "Checkpoint is consistent.")
+		# Get last slot in the checkpoint and history should start after this checkpoint
+
+		slot_to_start_history = 0
+		if (len(temp) > 0):
+			slot_to_start_history = self.wedged_data[quorum[0]].checkpoint[-1].slot
+			print("History needs to start from : ", slot_to_start_history)
+
+		# Lets check if all history starts with slot after checkpoint.
+		longest_history_len = 0
+		longest_replica = None
+
+		log.info(self.INFO + "Checking if history details are consistent.")
+		for replica in quorum:
+			if (len(self.wedged_data[replica].history) == 0):
+				return True, None, None
+
+			if (self.wedged_data[replica].history[0].slot != slot_to_start_history + 1):
+				log.info(self.INFO + "quorum validity failed, history starting slot does not match checkpoint")
+				return False, None, None
+
+			l = len(self.wedged_data[replica].history)
+			if (l > longest_history_len):
+				longest_replica = replica
+				longest_history_len = l
+
+		count = 0
+		catch_up_replicas = []
+		while (count < longest_history_len):
+			slot = None
+			operation = None
+			print('--------------')
+			for replica in quorum:
+				if (len(self.wedged_data[replica].history) > count):
+					s = self.wedged_data[replica].history[count].slot
+					o = self.wedged_data[replica].history[count].operation
+					print("replica : ",replica ," slot : ", s, " type : ", o.type)
+					if (slot == None and operation == None):
+						slot = s 
+						operation = o
+					else:
+						if (slot != s or operation.type != o.type or operation.msg_id != o.msg_id):
+							log.info(self.INFO + "quorum validity failed, history is not consistent")
+							return False, None, None
+				else:
+					catch_up_replicas.append(replica)
+
+			count += 1
+
+		log.info(self.INFO + "History is consistent.")
+		return True, catch_up_replicas, longest_replica
+
+	def start_quorum_check():
+		quorum = self.quorums.pop()
+		res, catch_up_replicas, longest_replica = is_valid_quorum(quorum)
+
+		if (res == True):
+
+			if (longest_replica == None):
+				log.info(self.INFO + "No history recorded yet.")
+				return
+
+			log.info(self.INFO + "Valid quorum found and checking if we need to catch up the history.")
+			# if catch up list is empty we don't need to catchup
+			if (len(catch_up_replicas) > 0):
+				log.info(self.INFO + str(longest_replica) + " has more history, we need to catchup.")
+			else:
+				log.info(self.INFO + "No need to catch up.")
+
+		else:
+			if (len(self.quorums) > 0):
+				start_quorum_check()
+			else:
+				log.info(self.INFO + "No valid quorums found.")
+
 	# This method will send required details to the client
 	def send_client_config(client):
 		conf = ClientConfig(self.verify_keys, self.replica_list, int(self.init_config[TOLERENCE]))
@@ -196,6 +302,13 @@ class Olympus(process):
 		conf.tail_id = self.tail
 		log.info(self.INFO + "Sending replica details to client " + str(client))
 		send(("client_config", conf), to=client)
+
+	# Send a message to all replicas asking for wedged object.
+	# This message also tells replicas to become immutable
+	def get_wedged_data():
+		log.info(self.INFO + "Requesting wedged data and also asking replicas to become immutable.")
+		for replica in self.replica_list:
+			send(("wedged"), to=replica)
 
 	################### Receivers for olympus ######################
 
@@ -214,3 +327,26 @@ class Olympus(process):
 			is_changed = True
 
 		send(("config_change_result", is_changed), to=c)
+
+
+	# If sender is client then we need to verify proof
+	def receive(msg=("reconfigure", proof), from_=sender):
+		log.info(self.INFO + "Received reconfig request from " + str(sender))
+		get_wedged_data()
+
+	def receive(msg=("wedged_data", wedged_data), from_=r):
+		log.info(self.INFO + "Received wedged data from " + str(r))
+		self.wedged_data[r] = wedged_data
+
+		# As soon as we receive t+1 th wedged data we start making quorums
+		if (len(self.wedged_data) >= float(self.init_config[TOLERENCE]) + 1):
+			temp = []
+			temp.extend(combinations(list(self.wedged_data.keys()), int(self.init_config[TOLERENCE]) + 1))
+			# As soon as we receive t+1, they will be our first quorum
+			for item in temp:
+				self.quorums.add(item)
+
+			# Print and call this methof for the first time.
+			if (len(self.wedged_data) == float(self.init_config[TOLERENCE]) + 1):
+				log.info(self.INFO + "Received t+1 wedge responses, starts making quorums.")
+				start_quorum_check()
