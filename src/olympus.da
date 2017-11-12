@@ -30,6 +30,7 @@ class Olympus(process):
 		self.quorums = set()
 		self.head_timeout = init_config[HEAD_TIMEOUT]
 		self.nonhead_timeout = init_config[NONHEAD_TIMEOUT]
+		self.caughtup_hash = dict()
 		self.head = None
 		self.tail = None
 		self.no_of_replicas = (2 * float(init_config[TOLERENCE])) + 1 # 2t+1
@@ -144,7 +145,6 @@ class Olympus(process):
 		else:
 			log.info(self.INFO + "Deleting old replicas.")
 			pass
-		pass
 
 	# This method will generate signing keys and encoded verification keys for
 	# all the replicas. We save it into two seperate dict.
@@ -272,6 +272,11 @@ class Olympus(process):
 		log.info(self.INFO + "History is consistent.")
 		return True, catch_up_replicas, longest_replica
 
+
+	def get_running_state(replicas, longest_replica):
+		log.info(self.INFO + "Catch up successfull, getting the running state.")
+		send(("running_state"), to=longest_replica)
+
 	def start_quorum_check():
 		quorum = self.quorums.pop()
 		res, catch_up_replicas, longest_replica = is_valid_quorum(quorum)
@@ -286,11 +291,34 @@ class Olympus(process):
 			# if catch up list is empty we don't need to catchup
 			if (len(catch_up_replicas) > 0):
 				log.info(self.INFO + str(longest_replica) + " has more history, we need to catchup.")
+
+				# Send a catch up message to all replicas in the list
+				for replica in catch_up_replicas:
+					send(("catch_up", self.wedged_data[longest_replica].history), to=replica)
+
+				# wait till all of them send hashed response for caught up message
+
+				await(len(self.caughtup_hash) == len(catch_up_replicas))
+				print("-------------------********---------------------")
+				# time.sleep(10)
+				log.info(self.INFO + "Verifying if hash of all catchup is same.")
+				if (all(x == list(self.caughtup_hash.values())[0] for x in self.caughtup_hash.values()) == True):
+					get_running_state(catch_up_replicas, longest_replica)
+
+				else:
+					self.caughtup_hash = dict()
+					log.info(self.INFO + "Catch up failed, choosing next quorum")
+					if (len(self.quorums) > 0):
+						start_quorum_check()
+					else:
+						log.info(self.INFO + "No valid quorums found.")
 			else:
 				log.info(self.INFO + "No need to catch up.")
+				get_running_state(quorum, longest_replica)
 
 		else:
 			if (len(self.quorums) > 0):
+				log.info(self.INFO + " checking next quorum.")
 				start_quorum_check()
 			else:
 				log.info(self.INFO + "No valid quorums found.")
@@ -334,6 +362,10 @@ class Olympus(process):
 		log.info(self.INFO + "Received reconfig request from " + str(sender))
 		get_wedged_data()
 
+	# Wedged data from the replicas are receives here. As soon as we recieve t+1 data
+	# we start verifying if quorum is valid. Meantime as and when we receive new data
+	# we make quorums.
+
 	def receive(msg=("wedged_data", wedged_data), from_=r):
 		log.info(self.INFO + "Received wedged data from " + str(r))
 		self.wedged_data[r] = wedged_data
@@ -350,3 +382,20 @@ class Olympus(process):
 			if (len(self.wedged_data) == float(self.init_config[TOLERENCE]) + 1):
 				log.info(self.INFO + "Received t+1 wedge responses, starts making quorums.")
 				start_quorum_check()
+
+	# After catching up we receive hashed data here, this verification is to 
+	# check if catchup was successful.
+
+	def receive(msg=("catch_up_verification", hash_data), from_=r):
+		log.info(self.INFO + "Received catch up result from " + str(r))
+		self.caughtup_hash[r] = hash_data
+
+	def receive(msg=("running_state_data", data), from_=r):
+		log.info(self.INFO + "Received running state - " + str(data))
+
+		if (hash(sorted(data.items())) == list(self.caughtup_hash.values())[0]):
+			log.info(self.INFO + "Running state verified.")
+			self.data_store = data
+			make_new_replica()
+		else:
+			pass

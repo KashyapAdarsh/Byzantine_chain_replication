@@ -365,6 +365,9 @@ class Replica(process):
 		order_shuttle.statements.append(sign_statement(OrderStatement(slot, \
 										operation, self.config.id)))
 
+		# add order shuttle to current replicas history
+		self.history.append(order_shuttle)
+
 		# Verify the order shuttle before it is sent ahead
 		if (verify_shuttle(order_shuttle, "order_proof") == False):
 			log.error(self.INFO + "Order shuttle verification failed for msg "+ str(operation.msg_id)\
@@ -391,8 +394,6 @@ class Replica(process):
 			order_shuttle, result_shuttle = perform_failure_injection(order_shuttle, \
 						result_shuttle, self.config.replica_list.index(self.config.id))
 
-		# add order shuttle to current replicas history
-		self.history.append(order_shuttle)
 
 		# We have to send result to client and start result shuttle message
 		# backwards if it is a tail, else just forward the shuttle.
@@ -503,6 +504,9 @@ class Replica(process):
 		order_shuttle.statements.append(sign_statement(OrderStatement(slot, \
 													operation, self.config.id)))
 
+		# add order shuttle to current replicas history
+		self.history.append(order_shuttle)
+
 		# Result shuttle..
 		# Create a result shuttle that goes down the chain
 		result_shuttle = ResultShuttle(client, operation.msg_id, result, operation)
@@ -518,9 +522,6 @@ class Replica(process):
 			or self.tamper_next_send == True)):
 			log.info(self.INFO + "Failure Injection condition satisfied.")
 			order_shuttle, result_shuttle = perform_failure_injection(order_shuttle, result_shuttle, 0)
-
-		# add order shuttle to current replicas history
-		self.history.append(order_shuttle)
 
 		log.info(self.INFO + "Hashing the result and signing the statments for msg "+ str(operation.msg_id))
 		# Same send will be used for both order and result shuttle down the chain
@@ -564,6 +565,20 @@ class Replica(process):
 				return self.config.data_store[operation.data.value]
 		else:
 			return ERROR
+
+	def catch_up(longest_history):
+		# we need to catch up 
+		for index in range(0,len(longest_history)):
+			if (index < len(self.history)):
+				continue
+			else:
+				operation = longest_history[index].operation
+				execute_operation(operation)
+		log.info(self.INFO + "catch up successful, sending hash of datastore.")
+		# print("After catch up sorted : ",sorted(self.config.data_store.items()))
+
+		print("******** - ", hash(sorted(self.config.data_store.items())))
+		send(("catch_up_verification", hash(sorted(self.config.data_store.items()))), to=self.olympus)
 
 	######### Receivers in replica ##########
 	
@@ -677,4 +692,13 @@ class Replica(process):
 
 		send(("wedged_data", wedged_data), to=self.olympus)
 		log.info(self.INFO + "State changed to immutable.")
+		print(self.INFO , " :  ", self.config.data_store)
 		self.config.mode = IMMUTABLE
+
+	def receive(msg=("catch_up", longest_history), from_=o):
+		log.info(self.INFO + "Received request to catch up.")
+		catch_up(longest_history)
+
+	def receive(msg=("running_state"), from_=o):
+		log.info(self.INFO + "Received request for running state, encrypting and sending the state")
+		send(("running_state_data", self.config.data_store), to=o)
