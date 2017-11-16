@@ -6,5 +6,9 @@ def get_next_slot():
 	slot_number += 1
 	return slot_number
 
+def init_slot(n):
+	global slot_number
+	slot_number = n
+
 def get_current_slot():
 	return slot_number

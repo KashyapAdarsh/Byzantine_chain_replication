@@ -10,6 +10,7 @@ import pickle
 import uuid
 import time
 import sys
+import os
 
 class Replica(process):
 
@@ -26,6 +27,7 @@ class Replica(process):
 		self.test = False
 		self.history = []
 		self.checkpoint = []
+		self.latest_result = dict()
 		self.olympus = None
 		self.tamper_next_send = False # Used only during forwarded request trigger
 		self.result_cache = dict()
@@ -47,6 +49,7 @@ class Replica(process):
 			self.forward_msg_count[key] = 0
 			self.forward_shuttle_count[key] = 0
 			self.result_shuttle_count[key] = 0
+			self.latest_result[key] = None
 
 	# This method verifies if client is valid
 	def is_valid_client(c):
@@ -375,9 +378,10 @@ class Replica(process):
 			notify_olympus(order_shuttle)
 			return
 
-		result_shuttle.statements.append(sign_statement(ResultStatement(hash(result), \
-														operation)))
-		
+		result_statement = ResultStatement(hash(result),operation)
+		result_shuttle.statements.append(sign_statement(result_statement))
+		self.latest_result[operation.client_id] = (result_statement, result)
+
 		# Verify the result shuttle before it is sent ahead
 		if (verify_shuttle(result_shuttle, "result_proof") == False):
 			log.error(self.INFO + "Result shuttle verification failed msg "+ str(operation.msg_id)\
@@ -512,8 +516,10 @@ class Replica(process):
 		result_shuttle = ResultShuttle(client, operation.msg_id, result, operation)
 		# Add the first result statement
 		# TODO - Need to encrypt result
-		result_shuttle.statements.append(sign_statement(ResultStatement(hash(result), \
-													operation)))
+
+		result_statement = ResultStatement(hash(result),operation)
+		result_shuttle.statements.append(sign_statement(result_statement))
+		self.latest_result[operation.client_id] = (result_statement, result)
 
 		# This checks if we are supposed to inject some failure before sending 
 		# the shuttle ahead
@@ -573,12 +579,14 @@ class Replica(process):
 				continue
 			else:
 				operation = longest_history[index].operation
-				execute_operation(operation)
+				result = execute_operation(operation)
+				self.latest_result[operation.client_id] = (ResultStatement(hash(result),operation), result)
 		log.info(self.INFO + "catch up successful, sending hash of datastore.")
 		# print("After catch up sorted : ",sorted(self.config.data_store.items()))
 
 		print("******** - ", hash(sorted(self.config.data_store.items())))
-		send(("catch_up_verification", hash(sorted(self.config.data_store.items()))), to=self.olympus)
+		send(("catch_up_verification", hash(sorted(self.config.data_store.items())), \
+			self.latest_result), to=self.olympus)
 
 	######### Receivers in replica ##########
 	
@@ -650,11 +658,12 @@ class Replica(process):
 	# This receives client details from olympus, we need this because we start
 	# replicas before all clients register
 
-	def receive(msg=('client_details', client_info), from_=o):
+	def receive(msg=('client_details', client_info, slot), from_=o):
 		log.info(self.INFO + "Received client information")
 		self.config.clients = client_info
 		# Save the olympus info
 		self.olympus = o
+		init_slot(slot)
 		log.info(self.INFO + "Olympus info registered : " + str(self.olympus))
 		init_counts()
 
@@ -686,7 +695,7 @@ class Replica(process):
 	# immutable.
 	def receive(msg=("wedged"), from_=o):
 		log.info(self.INFO + "Received reconfig command from olympus, making wedged data and sending it to olympus.")
-		wedged_data = wedgedData(self.config.id, self.history, self.checkpoint)
+		wedged_data = wedgedData(self.config.id, self.history, self.checkpoint, get_current_slot())
 		# TODO - signing the wedged_data
 		#wedged_data = sign_statement(wedged_data)
 
@@ -702,3 +711,10 @@ class Replica(process):
 	def receive(msg=("running_state"), from_=o):
 		log.info(self.INFO + "Received request for running state, encrypting and sending the state")
 		send(("running_state_data", self.config.data_store), to=o)
+
+	def receive(msg=("get_latest_result"), from_=o):
+		send(("latest_result", self.latest_result), to=o)
+
+	def receive(msg=("exit"), from_=o):
+		log.info(self.INFO + "Process killed.")
+		os._exit(-1)

@@ -26,6 +26,7 @@ class Client(process):
 		self.replica_list = None
 		self.replicas_ready = False
 		self.olympus = olympus
+		self.is_reconfig_finished = False
 		self.data_store = dict()
 		self.retransmit_result = dict()
 		self.config_timer = None
@@ -53,13 +54,18 @@ class Client(process):
 		self.config_timer = CustomTimer(float(CONFIG_CHECK_INTERVAL), check_config_change)
 
 		for load in work_load:
-			time.sleep(2)
+			time.sleep(1)
 			msg_id = uuid.uuid4()
+			# This is required here because when reconfig happens, and if there is a scenarios where :
+			# client sent the request and byt he time it reached head, head had become immutable.
+			handle_any_retransmission()
 			operation = make_operation(msg_id, load)
 			if (operation == None):
 				continue
 			send_request(operation, "new")
 			execute_operation(operation)
+
+		handle_any_retransmission()
 
 		#after all work load is processed check that dictionary contains expected content at end of test case
 		log.info(self.INFO + "sending data store query request to head")
@@ -135,12 +141,14 @@ class Client(process):
 		# Sending a new request
 
 		if (type == "new"):
-			log.info(self.INFO + "sending operation request to head with msgID : "\
-					+str(operation.msg_id))
-			msg_details[operation.msg_id] = ClientMessage(False, operation)
 			send(("operation", operation, None, None), to=self.replica_head)
+			log.info(self.INFO + "sending operation request to head with msgID : "\
+					+str(operation.msg_id) + " operation : {" + str(operation.type) + \
+					"(" + str(operation.data.key) + "," + str(operation.data.value) + ")}")
+			self.msg_details[operation.msg_id] = ClientMessage(False, operation)
 			
-			if(await(self.msg_details[operation.msg_id].is_response_received == True)):
+			if(await(self.msg_details[operation.msg_id].is_response_received == True or \
+				self.msg_details[operation.msg_id].is_response_received == "Pending")):
 				continue
 			elif (timeout(self.timeout)):
 				log.info(self.INFO + "TIMEOUT")
@@ -152,10 +160,16 @@ class Client(process):
 
 			# We wait untill all replicas send the result
 			# TODO :  If we receive result from all then we need to verify
-			if(await(len(self.retransmit_result) > 0)):
+			if(await((len(self.retransmit_result) > 0) or (self.msg_details[operation.msg_id].is_response_received == True))):
+				
+				# We can enter this loop with second condition when we receive result from olympus during
+				# reconfiguration.
+				if (self.msg_details[operation.msg_id].is_response_received == True):
+					continue
+
 				log.info(self.INFO + "Received a succesfull retransmission result from " + \
 						str(list(self.retransmit_result.keys())[0]) + " for msg : " + str(operation.msg_id))
-				self.msg_details[operation.msg_id].is_response_received == True
+				self.msg_details[operation.msg_id].is_response_received = True
 				# Better to print result after verification
 				if (verify_result(self.retransmit_result[list(self.retransmit_result.keys())[0]]) is False):
 					log.error(self.INFO + "Result verification failed for msg "+str(operation.msg_id)+", need to reconfigure")
@@ -248,9 +262,19 @@ class Client(process):
 		else:
 			return ERROR
 
+	# If there are any pending requests i.e. not received results from olympus either (could be possible
+	# when replcias in quorum has not seen this.)
+	def handle_any_retransmission():
+		# Handle retransmitting if any
+		for msg in list(self.msg_details.keys()):
+			print(self.msg_details[msg].operation.msg_id, " status : ", self.msg_details[msg].is_response_received)
+			if (self.msg_details[msg].is_response_received == "Pending"):
+				log.info(self.INFO + str(self.msg_details[msg].operation.msg_id) + " Re-transmitting")
+				send_request(self.msg_details[msg].operation, "retransmission")
 
 	def broadcast_request(operation):
 		# This will broadcast the retransmission to all replicas
+		print("Broadcasting to all replicas : " , list(self.replica_keys.keys()))
 		for replica, val in self.replica_keys.items():
 			log.info(self.INFO + "sending retransmission request to replica " +str(replica)+" for msgID : "\
 					+str(operation.msg_id))
@@ -265,7 +289,33 @@ class Client(process):
 		self.replica_tail = config.tail_id
 		self.replica_keys = config.replicas
 		self.replica_list = config.replica_list
-		self = config.t
+		self.tolerance = config.t
+
+	def receive(msg=("result_from_olympus", response), from_=o):
+
+		# If we receive response for message that we have already got response, then neglect
+		print("***************" + str(response.msg_id) + "******************")
+		if (self.msg_details[response.msg_id].is_response_received == True):
+			print("****** NO USE *******")
+			await(self.is_reconfig_finished == True)
+			for msg in list(self.msg_details.keys()):
+				if (self.msg_details[msg].is_response_received == False):
+					# Making it pending
+					log.info(self.INFO + "Making " + str(self.msg_details[msg].operation.msg_id) + "as pending.")
+					self.msg_details[msg].is_response_received = "Pending"
+			return
+
+		log.info(self.INFO + "Received result for msg " + str(response.msg_id))
+
+		log.info(self.INFO + "Result verified for msg "+ str(response.msg_id) + \
+				" and the result is : " + str(response.result))
+
+		# Before making response received true, we need to get all other details of new config.
+		# Once the below boolean is made true, client will continue sending new requests.
+		# This await condition will be satisfied after all details of replicas is received and
+		# new head is ready to handle new requests.
+		await(self.is_reconfig_finished == True)
+		self.msg_details[response.msg_id].is_response_received = True
 
 	# Receiver for result in client.
 	# This has to verify the result and stuff
@@ -283,7 +333,7 @@ class Client(process):
 
 			log.info(self.INFO + "Result verified for msg "+ str(response.msg_id) + \
 					" and the result is : " + str(response.result))
-			msg_details[response.msg_id].is_response_received = True
+			self.msg_details[response.msg_id].is_response_received = True
 		# This receives the result through retransmit
 		else :
 			#log.info(self.INFO + "Received result for retransmission of " + \
@@ -302,8 +352,17 @@ class Client(process):
 		log.info(self.INFO + " Current active config : " + str(self.active_config))
 		self.replicas_ready = True
 
-	def receive(msg=("config_change_result", result), from_=o):
+	def receive(msg=("config_change_result", result, active_config), from_=o):
 		if (result == True):
 			log.info(self.INFO + "Configration has been changed, need to resend pending requests to new head.")
+			# Save the new active config
+			self.active_config = active_config
+			# Get new client config object, this contains new replica details
+			self.replica_list = None
+			log.info(self.INFO + "Requesting new replica details.")
+			send(("new_client_config", self.client_id), to=o)
+			await(self.replica_list != None)
+			self.is_reconfig_finished = True
+		
 		else:
 			log.info(self.INFO + "Configuration is not changed.")

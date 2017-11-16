@@ -2,6 +2,7 @@ from logger import *
 from classes import *
 from constants import *
 from replica import Replica
+from util import *
 import uuid
 import time
 import sys
@@ -25,12 +26,14 @@ class Olympus(process):
 		self.configs = []
 		self.replica_list = []
 		self.active_config = None
+		self.current_slot = 0
 		self.wedged_data = dict()
 		self.data_store = dict()
 		self.quorums = set()
 		self.head_timeout = init_config[HEAD_TIMEOUT]
 		self.nonhead_timeout = init_config[NONHEAD_TIMEOUT]
 		self.caughtup_hash = dict()
+		self.latest_result = dict()
 		self.head = None
 		self.tail = None
 		self.no_of_replicas = (2 * float(init_config[TOLERENCE])) + 1 # 2t+1
@@ -46,13 +49,11 @@ class Olympus(process):
 		make_new_replica()
 
 		# Wait untill all the clients register with olympus
-		# await(len(self.clients) == int(self.no_of_clients))
-
 		await(len(self.clients) == self.no_of_clients)
 
 		# Sends client info to everyone
 		for replica in self.replica_list:
-			send(("client_details", self.clients), to=replica)
+			send(("client_details", self.clients, self.current_slot), to=replica)
 
 		# Tell clients that replicas are ready and also send current 
 		# active configuration details.
@@ -69,8 +70,9 @@ class Olympus(process):
 	def make_new_replica():
 		config_id = uuid.uuid4()
 		spawn_replicas()
-		active_config = config_id
+		# This will help to keep slot number cont during reconfig
 		configs.append(config_id)
+		active_config = config_id
 
 	def send_fault_injection():
 		failure = None
@@ -144,7 +146,15 @@ class Olympus(process):
 
 		else:
 			log.info(self.INFO + "Deleting old replicas.")
-			pass
+			for replica in self.replica_list:
+				send(("exit"), to=replica)
+			self.replica_list = []
+			log.info(self.INFO + "Starting new set of processes for reconfiguration.")
+			spawn_replicas()
+
+			# Sends client info to everyone after re-spawning them
+			for replica in self.replica_list:
+				send(("client_details", self.clients, self.current_slot), to=replica)
 
 	# This method will generate signing keys and encoded verification keys for
 	# all the replicas. We save it into two seperate dict.
@@ -152,13 +162,14 @@ class Olympus(process):
 
 	def generate_keys():
 		log.info(self.INFO + "Generating signing and verification keys.")
-
+		self.verify_keys = dict()
+		
 		for replica in self.replica_list:
 			signing_key = nacl.signing.SigningKey.generate()
 			verify_key = signing_key.verify_key
 			verify_key_hex = verify_key.encode(encoder=nacl.encoding.HexEncoder)
 			signing_keys[replica] = signing_key
-			verify_keys[replica] = verify_key_hex
+			self.verify_keys[replica] = verify_key_hex
 
 	# This method creates a configuration object for a replica
 	# @arg - specific signing key, that will be sent only to this replica
@@ -197,6 +208,22 @@ class Olympus(process):
 	def hash(result):
 		digest = self.HASHER(pickle.dumps(result), encoder=nacl.encoding.HexEncoder)
 		return digest
+
+	# After catch up response is received, we need to send any pending response to
+	# the client.
+	def send_pending_result_to_client(quorum):
+		latest_per_client = dict()
+		log.info(self.INFO + "Sending pending results to the clients.")
+		for replica in quorum:
+			if (replica not in list(self.latest_result.keys())):
+				continue
+
+			result = self.latest_result[replica]
+			# Instead of sending everytime need to optimize here
+			for client in list(result.keys()):
+				print("CLIENT : ", client, "msg : ",result[client][0].operation.msg_id)
+				response = ResponseObject(result[client][0].operation.msg_id, result[client][1], None)
+				send(("result_from_olympus", response), to=client)
 
 	def is_valid_quorum(quorum):
 		log.info(self.INFO + "Replicas in current quorum :  " + str(quorum))
@@ -247,7 +274,7 @@ class Olympus(process):
 				longest_history_len = l
 
 		count = 0
-		catch_up_replicas = []
+		catch_up_replicas = set()
 		while (count < longest_history_len):
 			slot = None
 			operation = None
@@ -265,12 +292,12 @@ class Olympus(process):
 							log.info(self.INFO + "quorum validity failed, history is not consistent")
 							return False, None, None
 				else:
-					catch_up_replicas.append(replica)
+					catch_up_replicas.add(replica)
 
 			count += 1
 
 		log.info(self.INFO + "History is consistent.")
-		return True, catch_up_replicas, longest_replica
+		return True, list(catch_up_replicas), longest_replica
 
 
 	def get_running_state(replicas, longest_replica):
@@ -299,10 +326,10 @@ class Olympus(process):
 				# wait till all of them send hashed response for caught up message
 
 				await(len(self.caughtup_hash) == len(catch_up_replicas))
-				print("-------------------********---------------------")
 				# time.sleep(10)
 				log.info(self.INFO + "Verifying if hash of all catchup is same.")
 				if (all(x == list(self.caughtup_hash.values())[0] for x in self.caughtup_hash.values()) == True):
+					send_pending_result_to_client(quorum)
 					get_running_state(catch_up_replicas, longest_replica)
 
 				else:
@@ -313,7 +340,11 @@ class Olympus(process):
 					else:
 						log.info(self.INFO + "No valid quorums found.")
 			else:
-				log.info(self.INFO + "No need to catch up.")
+				log.info(self.INFO + "No need to catch up, lets just get the latest result for all clients")
+				# If we are not sending catch up, then we need latest results that has to be sent to client
+				send(("get_latest_result"), to=longest_replica)
+				await(len(self.latest_result) > 0)
+				send_pending_result_to_client([longest_replica])
 				get_running_state(quorum, longest_replica)
 
 		else:
@@ -348,13 +379,16 @@ class Olympus(process):
 		await(self.all_replicas_spawned == True)
 		send_client_config(c)
 
+	def receive(msg=("new_client_config", client_id), from_=c):
+		send_client_config(c)
+
 	def receive(msg=("is_config_changed", config_id), from_=c):
 		log.info(self.INFO + "Received config change check request from client " + str(c))
 		is_changed = False
 		if (self.active_config != config_id):
 			is_changed = True
 
-		send(("config_change_result", is_changed), to=c)
+		send(("config_change_result", is_changed, self.active_config), to=c)
 
 
 	# If sender is client then we need to verify proof
@@ -369,6 +403,8 @@ class Olympus(process):
 	def receive(msg=("wedged_data", wedged_data), from_=r):
 		log.info(self.INFO + "Received wedged data from " + str(r))
 		self.wedged_data[r] = wedged_data
+		if (wedged_data.slot > self.current_slot):
+			self.current_slot = wedged_data.slot
 
 		# As soon as we receive t+1 th wedged data we start making quorums
 		if (len(self.wedged_data) >= float(self.init_config[TOLERENCE]) + 1):
@@ -386,16 +422,24 @@ class Olympus(process):
 	# After catching up we receive hashed data here, this verification is to 
 	# check if catchup was successful.
 
-	def receive(msg=("catch_up_verification", hash_data), from_=r):
+	def receive(msg=("catch_up_verification", hash_data, latest_result), from_=r):
 		log.info(self.INFO + "Received catch up result from " + str(r))
 		self.caughtup_hash[r] = hash_data
+		self.latest_result[r] = latest_result
 
 	def receive(msg=("running_state_data", data), from_=r):
 		log.info(self.INFO + "Received running state - " + str(data))
 
-		if (hash(sorted(data.items())) == list(self.caughtup_hash.values())[0]):
+		if (len(self.caughtup_hash) > 0 and hash(sorted(data.items())) == list(self.caughtup_hash.values())[0]):
+			log.info(self.INFO + "Running state verified.")
+			self.data_store = data
+			make_new_replica()
+		elif (len(self.caughtup_hash) == 0):
 			log.info(self.INFO + "Running state verified.")
 			self.data_store = data
 			make_new_replica()
 		else:
 			pass
+
+	def receive(msg=("latest_result", latest_result), from_=r):
+		self.latest_result[r] = latest_result
