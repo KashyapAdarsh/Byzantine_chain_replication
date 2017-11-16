@@ -30,6 +30,7 @@ class Olympus(process):
 		self.wedged_data = dict()
 		self.data_store = dict()
 		self.quorums = set()
+		self.is_config_in_progress = False
 		self.head_timeout = init_config[HEAD_TIMEOUT]
 		self.nonhead_timeout = init_config[NONHEAD_TIMEOUT]
 		self.caughtup_hash = dict()
@@ -316,7 +317,8 @@ class Olympus(process):
 			log.info(self.INFO + "Running state : " + str(self.running_state_data[quorum[0]]))
 			self.data_store = data
 			clear_data()
-			make_new_replica()	
+			make_new_replica()
+			self.is_config_in_progress = False	
 		else:
 			if (len(self.quorums) > 0):
 				start_quorum_check()
@@ -419,8 +421,9 @@ class Olympus(process):
 
 	# If sender is client then we need to verify proof
 	def receive(msg=("reconfigure", proof), from_=sender):
-		log.info(self.INFO + "Received reconfig request from " + str(sender))
-		get_wedged_data()
+		if (self.is_config_in_progress == False):
+			log.info(self.INFO + "Received reconfig request from " + str(sender))
+			get_wedged_data()
 
 	# Wedged data from the replicas are receives here. As soon as we recieve t+1 data
 	# we start verifying if quorum is valid. Meantime as and when we receive new data
@@ -456,19 +459,6 @@ class Olympus(process):
 	def receive(msg=("running_state_data", data), from_=r):
 		log.info(self.INFO + "Received running state from "+ str(r))
 		self.running_state_data[r] = data
-
-		'''
-		if (len(self.caughtup_hash) > 0 and hash(sorted(data.items())) == list(self.caughtup_hash.values())[0]):
-			log.info(self.INFO + "Running state verified.")
-			self.data_store = data
-			make_new_replica()
-		elif (len(self.caughtup_hash) == 0):
-			log.info(self.INFO + "Running state verified.")
-			self.data_store = data
-			make_new_replica()
-		else:
-			pass
-		'''
 
 	def receive(msg=("latest_result", latest_result), from_=r):
 		self.latest_result[r] = latest_result
