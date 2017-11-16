@@ -267,7 +267,6 @@ class Client(process):
 	def handle_any_retransmission():
 		# Handle retransmitting if any
 		for msg in list(self.msg_details.keys()):
-			print(self.msg_details[msg].operation.msg_id, " status : ", self.msg_details[msg].is_response_received)
 			if (self.msg_details[msg].is_response_received == "Pending"):
 				log.info(self.INFO + str(self.msg_details[msg].operation.msg_id) + " Re-transmitting")
 				send_request(self.msg_details[msg].operation, "retransmission")
@@ -294,9 +293,7 @@ class Client(process):
 	def receive(msg=("result_from_olympus", response), from_=o):
 
 		# If we receive response for message that we have already got response, then neglect
-		print("***************" + str(response.msg_id) + "******************")
 		if (self.msg_details[response.msg_id].is_response_received == True):
-			print("****** NO USE *******")
 			await(self.is_reconfig_finished == True)
 			for msg in list(self.msg_details.keys()):
 				if (self.msg_details[msg].is_response_received == False):

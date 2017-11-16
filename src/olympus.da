@@ -34,6 +34,7 @@ class Olympus(process):
 		self.nonhead_timeout = init_config[NONHEAD_TIMEOUT]
 		self.caughtup_hash = dict()
 		self.latest_result = dict()
+		self.running_state_data = dict()
 		self.head = None
 		self.tail = None
 		self.no_of_replicas = (2 * float(init_config[TOLERENCE])) + 1 # 2t+1
@@ -221,7 +222,6 @@ class Olympus(process):
 			result = self.latest_result[replica]
 			# Instead of sending everytime need to optimize here
 			for client in list(result.keys()):
-				print("CLIENT : ", client, "msg : ",result[client][0].operation.msg_id)
 				response = ResponseObject(result[client][0].operation.msg_id, result[client][1], None)
 				send(("result_from_olympus", response), to=client)
 
@@ -300,9 +300,35 @@ class Olympus(process):
 		return True, list(catch_up_replicas), longest_replica
 
 
-	def get_running_state(replicas, longest_replica):
+	def get_running_state(quorum):
 		log.info(self.INFO + "Catch up successfull, getting the running state.")
-		send(("running_state"), to=longest_replica)
+		for replica in quorum:
+			send(("running_state"), to=replica)
+
+		await(len(self.running_state_data) == len(quorum))
+
+		temp = set()
+		for data in list(self.running_state_data.values()):
+			temp.add(hash(sorted(data.items())))
+
+		if (len(temp) == 1):
+			log.info(self.INFO + "Running state verified.")
+			log.info(self.INFO + "Running state : " + str(self.running_state_data[quorum[0]]))
+			self.data_store = data
+			clear_data()
+			make_new_replica()	
+		else:
+			if (len(self.quorums) > 0):
+				start_quorum_check()
+			else:
+				log.info(self.INFO + "No valid quorums found.")
+
+	def clear_data():
+		self.wedged_data = dict()
+		self.quorums = set()
+		self.caughtup_hash = dict()
+		self.latest_result = dict()
+		self.running_state_data = dict()
 
 	def start_quorum_check():
 		quorum = self.quorums.pop()
@@ -330,7 +356,7 @@ class Olympus(process):
 				log.info(self.INFO + "Verifying if hash of all catchup is same.")
 				if (all(x == list(self.caughtup_hash.values())[0] for x in self.caughtup_hash.values()) == True):
 					send_pending_result_to_client(quorum)
-					get_running_state(catch_up_replicas, longest_replica)
+					get_running_state(quorum)
 
 				else:
 					self.caughtup_hash = dict()
@@ -345,7 +371,7 @@ class Olympus(process):
 				send(("get_latest_result"), to=longest_replica)
 				await(len(self.latest_result) > 0)
 				send_pending_result_to_client([longest_replica])
-				get_running_state(quorum, longest_replica)
+				get_running_state(quorum)
 
 		else:
 			if (len(self.quorums) > 0):
@@ -428,8 +454,10 @@ class Olympus(process):
 		self.latest_result[r] = latest_result
 
 	def receive(msg=("running_state_data", data), from_=r):
-		log.info(self.INFO + "Received running state - " + str(data))
+		log.info(self.INFO + "Received running state from "+ str(r))
+		self.running_state_data[r] = data
 
+		'''
 		if (len(self.caughtup_hash) > 0 and hash(sorted(data.items())) == list(self.caughtup_hash.values())[0]):
 			log.info(self.INFO + "Running state verified.")
 			self.data_store = data
@@ -440,6 +468,7 @@ class Olympus(process):
 			make_new_replica()
 		else:
 			pass
+		'''
 
 	def receive(msg=("latest_result", latest_result), from_=r):
 		self.latest_result[r] = latest_result
