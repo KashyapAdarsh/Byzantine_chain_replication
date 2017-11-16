@@ -190,7 +190,6 @@ class Client(process):
 		if (len(response.result_proof.statements) < self.tolerance + 1):
 			return False
 
-
 		total_found = 0
 
 		for statement in response.result_proof.statements:
@@ -210,8 +209,6 @@ class Client(process):
 				continue
 
 			total_found += 1
-
-			# print("msg_ID : ",response.msg_id, "***********", res.result)
 
 			if (total_found == (self.tolerance + 1)):
 				log.info(self.INFO + "Valid t+1 found.")
@@ -316,6 +313,7 @@ class Client(process):
 
 	# Receiver for result in client.
 	# This has to verify the result and stuff
+	# TODO - request reconfig.
 
 	def receive(msg=("result", response), from_=r):
 
@@ -326,6 +324,9 @@ class Client(process):
 			if(verify_result(response) == False):
 				log.error(self.INFO + "Result verification failed for msg "+ \
 						str(response.msg_id)+", asking olympus to reconfigure")
+
+				log.info(self.INFO + "Making " + str(response.msg_id) + "as pending.")
+				self.msg_details[response.msg_id].is_response_received = "Pending"
 				return
 
 			log.info(self.INFO + "Result verified for msg "+ str(response.msg_id) + \
@@ -333,8 +334,6 @@ class Client(process):
 			self.msg_details[response.msg_id].is_response_received = True
 		# This receives the result through retransmit
 		else :
-			#log.info(self.INFO + "Received result for retransmission of " + \
-			# 	str(response.msg_id) + " from : " + str(r))
 			# We will add result to dict only if it is success, if we receive success result 
 			# from alteast one replica, then we are good
 			if (response.result != ERROR):
