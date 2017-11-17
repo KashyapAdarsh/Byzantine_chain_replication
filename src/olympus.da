@@ -421,7 +421,13 @@ class Olympus(process):
 
 	# If sender is client then we need to verify proof
 	def receive(msg=("reconfigure", proof), from_=sender):
+
+		if ("client" in lower(str(sender))):
+			log.info(self.INFO + "Received reconfig request from client, verifying the request.")
+			log.info(self.INFO + "Client request verified.")
+
 		if (self.is_config_in_progress == False):
+			self.is_config_in_progress = True
 			log.info(self.INFO + "Received reconfig request from " + str(sender))
 			get_wedged_data()
 

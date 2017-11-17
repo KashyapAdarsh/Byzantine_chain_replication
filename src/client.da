@@ -173,6 +173,11 @@ class Client(process):
 				# Better to print result after verification
 				if (verify_result(self.retransmit_result[list(self.retransmit_result.keys())[0]]) is False):
 					log.error(self.INFO + "Result verification failed for msg "+str(operation.msg_id)+", need to reconfigure")
+					
+					log.info(self.INFO + "Making " + str(operation.msg_id) + "as pending.")
+					self.msg_details[operation.msg_id].is_response_received = "Pending"
+
+					send(("reconfigure", self.retransmit_result[list(self.retransmit_result.keys())[0]]), to=self.olympus)
 					return
 				else:
 					log.info(self.INFO + "Retransmission result : " + str(self.retransmit_result[list(self.retransmit_result.keys())[0]].result_proof.result))
@@ -327,6 +332,7 @@ class Client(process):
 
 				log.info(self.INFO + "Making " + str(response.msg_id) + "as pending.")
 				self.msg_details[response.msg_id].is_response_received = "Pending"
+				send(("reconfigure", response), to=self.olympus)
 				return
 
 			log.info(self.INFO + "Result verified for msg "+ str(response.msg_id) + \
