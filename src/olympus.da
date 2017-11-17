@@ -81,27 +81,38 @@ class Olympus(process):
 		failure_key = None
 		for key in list(self.init_config.keys()):
 			if (key.startswith("failures[0")):
-				failure = init_config[key]
+				fail = self.init_config[key]
 				failure_key = key
 				break
 
 		# We don't have failures for this configuration
-		if (failure == None):
+		if (fail == None):
 			return
 
 		# Replica to which we need to send fault object
 		replica_index = int(failure_key.split(',')[1].strip().replace(']',''))
 		
-		failure = failure.split(',')
-		msg_count = int(failure[1].replace(')', '').strip())
-		opt = failure[2].replace('(','').replace(')','').strip()
-		client_index = int(failure[0].split('(')[1].strip())
-		shuttle_type = failure[0].split('(')[0].strip()
+		# If we have to perform more than one failure for the same message.
+		all_failures = fail.split(';')
+
+		opt = []
+		msg_count = -1
+		client_index = -1
+		shuttle_type = None
+
+		for failure in all_failures:
+			failure = failure.split(',')
+			msg_count = int(failure[1].replace(')', '').strip())
+
+			opt.append(failure[2].replace('(','').replace(')','').strip())
+			client_index = int(failure[0].split('(')[1].strip())
+			shuttle_type = failure[0].split('(')[0].strip()
 
 		if (client_index > len(self.client_list) or replica_index > len(self.replica_list)):
 			log.error(self.INFO +"Error processing failure injection.")
 			return
 
+		print("Failure operations :", opt)
 		self.failure_config = FailureConfig(self.client_list[client_index-1], \
 											msg_count, shuttle_type, opt)
 		log.info(self.INFO + "Sending failure config to " + str(self.replica_list[replica_index-1]))
@@ -422,8 +433,9 @@ class Olympus(process):
 	# If sender is client then we need to verify proof
 	def receive(msg=("reconfigure", proof), from_=sender):
 
-		if ("client" in lower(str(sender))):
-			log.info(self.INFO + "Received reconfig request from client, verifying the request.")
+		# Verifying 
+		if ("client" in str(sender).lower()):
+			log.info(self.INFO + "Received reconfig request from a client")
 			log.info(self.INFO + "Client request verified.")
 
 		if (self.is_config_in_progress == False):

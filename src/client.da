@@ -188,12 +188,18 @@ class Client(process):
 
 	def verify_result(response):
 		log.info(self.INFO + "Verifying result for msg " + str(response.msg_id))
-		index = 0
 		prev_res = None
 
 		# Verify result should have statement from atleast t+1 replicas.
 		if (len(response.result_proof.statements) < self.tolerance + 1):
 			return False
+
+		index = 0
+
+		# If drop is performed then we will not have head result, so to pick keys we need
+		# to adjust accordingly.
+		if (len(response.result_proof.statements) < len(self.replica_list)):
+			index = 1
 
 		total_found = 0
 
@@ -214,7 +220,6 @@ class Client(process):
 				continue
 
 			total_found += 1
-
 			if (total_found == (self.tolerance + 1)):
 				log.info(self.INFO + "Valid t+1 found.")
 				log.info(self.INFO + "Verification of result for msg "+str(response.msg_id)+" succesful.")

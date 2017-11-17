@@ -284,53 +284,54 @@ class Replica(process):
 	# 4) Above is repeated for both order and result shuttle
 
 	def perform_failure_injection(order_shuttle, result_shuttle, index):
-		log.info(self.INFO + "Performing failure injection - " + self.failure_config.opt_type \
-				+ " for msg " + str(result_shuttle.msg_id) )
+		log.info(self.INFO + "Performing failure injection for msg " + str(result_shuttle.msg_id))
 		
-		# Here lets change the statement of index that is sent below in both order and result shuttle
-		if (self.failure_config.opt_type == CHANGE_OPT):
-			log.info(self.INFO + "Changing the operation to get(X)")
-			# Decrypting the order statement first
-			verify_key = nacl.signing.VerifyKey(self.config.replica_keys[self.config.replica_list[index]], \
-												encoder=nacl.encoding.HexEncoder)
-			
-			# If trigger type is result shuttle then order shuttle received will be None
-			if (order_shuttle != None):
-				res = pickle.loads(verify_key.verify(order_shuttle.statements[index]))
+		for opt in self.failure_config.opt_type:
+			log.info(self.INFO + " Performing failure operation : " + str(opt))
+			# Here lets change the statement of index that is sent below in both order and result shuttle
+			if (opt == CHANGE_OPT):
+				log.info(self.INFO + "Changing the operation to get(X)")
+				# Decrypting the order statement first
+				verify_key = nacl.signing.VerifyKey(self.config.replica_keys[self.config.replica_list[index]], \
+													encoder=nacl.encoding.HexEncoder)
 				
-				# creating a wrong operation object
-				operation = Operation(GET, res.operation.msg_id, Data(None, 'X'), res.operation.client_id)
+				# If trigger type is result shuttle then order shuttle received will be None
+				if (order_shuttle != None):
+					res = pickle.loads(verify_key.verify(order_shuttle.statements[index]))
+					
+					# creating a wrong operation object
+					operation = Operation(GET, res.operation.msg_id, Data(None, 'X'), res.operation.client_id)
 
-				# Modifying original order statement of this replica to something wrong
-				order_shuttle.statements[index] = sign_statement(OrderStatement(res.slot, \
-														operation, self.config.id))
+					# Modifying original order statement of this replica to something wrong
+					order_shuttle.statements[index] = sign_statement(OrderStatement(res.slot, \
+															operation, self.config.id))
+					
+				# Decrypting the result statement first
+				res = pickle.loads(verify_key.verify(result_shuttle.statements[index]))
+				operation = Operation(GET, res.operation.msg_id, Data(None, 'X'), res.operation.client_id)			
+
+				# Modifying original result statement of this replica to something wrong
+				result_shuttle.statements[index] = sign_statement(ResultStatement(res.result,operation))
 				
-			# Decrypting the result statement first
-			res = pickle.loads(verify_key.verify(result_shuttle.statements[index]))
-			operation = Operation(GET, res.operation.msg_id, Data(None, 'X'), res.operation.client_id)			
+			elif (opt == DROP_RESULT):
+				log.info(self.INFO + "Dropping head result statement.")
+				# Drop the result statement of the head
+				del result_shuttle.statements[0]
+			elif (opt == CHANGE_RES):
+				log.info(self.INFO + "Adding fake hash(OK) as result hash.")
 
-			# Modifying original result statement of this replica to something wrong
-			result_shuttle.statements[index] = sign_statement(ResultStatement(res.result,operation))
-			
-		elif (self.failure_config.opt_type == DROP_RESULT):
-			log.info(self.INFO + "Dropping head result statement.")
-			# Drop the result statement of the head
-			del result_shuttle.statements[0]
-		elif (self.failure_config.opt_type == CHANGE_RES):
-			log.info(self.INFO + "Adding fake hash(OK) as result hash.")
+				verify_key = nacl.signing.VerifyKey(self.config.replica_keys[self.config.replica_list[index]], \
+													encoder=nacl.encoding.HexEncoder)
 
-			verify_key = nacl.signing.VerifyKey(self.config.replica_keys[self.config.replica_list[index]], \
-												encoder=nacl.encoding.HexEncoder)
+				# Decrypting the result statement first
+				res = pickle.loads(verify_key.verify(result_shuttle.statements[index]))
+				# We add hash of OK always
+				fake_result = hash(OK)
+				# Modifying original result statement of this replica to something wrong
+				result_shuttle.statements[index] = sign_statement(ResultStatement(fake_result,res.operation))
 
-			# Decrypting the result statement first
-			res = pickle.loads(verify_key.verify(result_shuttle.statements[index]))
-			# We add hash of OK always
-			fake_result = hash(OK)
-			# Modifying original result statement of this replica to something wrong
-			result_shuttle.statements[index] = sign_statement(ResultStatement(fake_result,res.operation))
-
-		else:
-			log.info(self.INFO + "Failure injection operation not recognized")
+			else:
+				log.info(self.INFO + "Failure injection operation not recognized")
 
 		return order_shuttle, result_shuttle
 
@@ -651,7 +652,7 @@ class Replica(process):
 		log.info(self.INFO + "Failure config : client id-" + str(failure_config.client_id) + \
 				", msg_count-" + str(failure_config.msg_count) + ", type-" + \
 				failure_config.shuttle_type +", operation-" + \
-				failure_config.opt_type)
+				str(failure_config.opt_type))
 
 		self.failure_config = failure_config
 
