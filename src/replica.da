@@ -28,6 +28,7 @@ class Replica(process):
 		self.history = []
 		self.checkpoint = []
 		self.latest_result = dict()
+		self.data_store_backup = dict()
 		self.olympus = None
 		self.tamper_next_send = False # Used only during forwarded request trigger
 		self.result_cache = dict()
@@ -363,7 +364,7 @@ class Replica(process):
 			self.msg_cache[operation.msg_id] = None
 
 		# Execute the necessary operations
-		result = execute_operation(operation)
+		result = execute_operation(operation, 'normal')
 
 		log.info(self.INFO + "Hashing the result and signing the statments for msg "+ str(operation.msg_id))
 		order_shuttle.statements.append(sign_statement(OrderStatement(slot, \
@@ -500,7 +501,7 @@ class Replica(process):
 			self.msg_cache[operation.msg_id] = None
 
 		# Execute the necessary operations
-		result = execute_operation(operation)
+		result = execute_operation(operation, "normal")
 
 		# Order shuttle..
 		# Create order shuttle that goes down the chain
@@ -542,14 +543,20 @@ class Replica(process):
 
 
 	# This method executes the operation on the datastore
-	def execute_operation(operation):
+	def execute_operation(operation, type):
+
+		if (type == 'normal'):
+			data_store = self.config.data_store
+		else:
+			data_store = self.data_store_backup
+
 		if (operation.type == PUT):
-			self.config.data_store[operation.data.key] = [operation.data.value]
+			data_store[operation.data.key] = [operation.data.value]
 			return OK
 
 		elif (operation.type == APPEND):
-			if (operation.data.key in self.config.data_store):
-				self.config.data_store[operation.data.key].append(operation.data.value)
+			if (operation.data.key in data_store):
+				data_store[operation.data.key].append(operation.data.value)
 				return OK
 			return FAIL
 
@@ -557,36 +564,41 @@ class Replica(process):
 			start = int(operation.data.value.split(":")[0])
 			end = int(operation.data.value.split(":")[1])
 
-			if (operation.data.key not in self.config.data_store or start < 0 \
-									or end > len(self.config.data_store)):
+			if (operation.data.key not in data_store or start < 0 \
+									or end > len(data_store)):
 				return FAIL
 			else:
-				self.config.data_store[operation.data.key] = \
+				data_store[operation.data.key] = \
 						self.config.data_store[operation.data.key][start : end]
 				return OK
 
 		elif (operation.type == GET):
-			if (operation.data.value not in self.config.data_store):
+			if (operation.data.value not in data_store):
 				return NOT_PRESENT
 			else:
-				return self.config.data_store[operation.data.value]
+				return data_store[operation.data.value]
 		else:
 			return ERROR
 
 	def catch_up(longest_history):
 		# we need to catch up 
+
+		# Deep copy the datastore first
+		self.data_store_backup = copy.deepcopy(self.config.data_store)
+		log.info(self.INFO + "Performing operation on a backup datastore")
+		
 		for index in range(0,len(longest_history)):
 			if (index < len(self.history)):
 				continue
 			else:
 				operation = longest_history[index].operation
-				result = execute_operation(operation)
+				result = execute_operation(operation, "catch_up")
 				self.latest_result[operation.client_id] = (ResultStatement(hash(result),operation), result)
 		log.info(self.INFO + "catch up successful, sending hash of datastore.")
 		# print("After catch up sorted : ",sorted(self.config.data_store.items()))
 
-		print("******** - ", hash(sorted(self.config.data_store.items())))
-		send(("catch_up_verification", hash(sorted(self.config.data_store.items())), \
+		print("******** - ", hash(sorted(self.data_store_backup.items())))
+		send(("catch_up_verification", hash(sorted(self.data_store_backup.items())), \
 			self.latest_result), to=self.olympus)
 
 	######### Receivers in replica ##########
@@ -711,7 +723,10 @@ class Replica(process):
 
 	def receive(msg=("running_state"), from_=o):
 		log.info(self.INFO + "Received request for running state, encrypting and sending the state")
-		send(("running_state_data", self.config.data_store), to=o)
+		if (len(self.data_store_backup) > 0):
+			send(("running_state_data", self.data_store_backup), to=o)
+		else:
+			send(("running_state_data", self.config.data_store), to=o)
 
 	def receive(msg=("get_latest_result"), from_=o):
 		send(("latest_result", self.latest_result), to=o)
