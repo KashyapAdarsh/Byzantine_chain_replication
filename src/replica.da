@@ -22,6 +22,7 @@ class Replica(process):
 		self.forward_msg_count = dict() # <client_id, forward_msg_count>, used for forwarded failure
 		self.shuttle_count = 0	
 		self.result_shuttle_count = 0
+		self.failure_config_list = None
 		self.failure_config = None
 		self.msg_cache = dict()
 		self.test = False
@@ -32,8 +33,13 @@ class Replica(process):
 		self.olympus = None
 		self.tamper_next_send = False # Used only during forwarded request trigger
 		self.result_cache = dict()
-		self.forward_shuttle_count = dict() # Used for shuttle failure
-		self.result_shuttle_count = dict()	# Used for result_shuttle failure
+		self.forward_shuttle_count = dict() # Used for shuttle failure trigger
+		self.result_shuttle_count = dict()	# Used for result_shuttle failure trigger
+		self.wedge_request_count = 0 # Used for wedged_request failure trigger
+		self.checkpoint_count = 0 #Used for receipt of m'th checkpoint message failure trigger
+		self.completed_checkpoint_count = 0 #Used for receipt of m'th completed checkpoint message failure trigger
+		self.get_running_state_req_count = 0 #Used for receipt of m'th get_running_state message failure trigger
+		self.catch_up_req_count = 0 #Used for receipt of m'th get_running_state message failure trigger
 		self.HASHER = nacl.hash.sha256
 		self.INFO = "["+str(self.config.id).replace('>', "").replace('<', '')+"] "
 		log.info(INFO +"Setup complete")
@@ -124,7 +130,7 @@ class Replica(process):
 				send_new_shuttle(operation, sender)
 
 				# Checks if checkpoint has to be initiated.
-				if (get_current_slot() % CHECKPOINT_NUM == 0):
+				if (get_current_slot() % self.config.checkpoint_num == 0):
 					log.info(self.INFO + "Checkpoint criteria satisfied.")
 					# We intentionally send one less to truncate
 					start_checkpoint_shuttle(get_current_slot() - 1)
@@ -142,6 +148,10 @@ class Replica(process):
 			log.info(self.INFO + "Adding the hash of the datastore to the checkpoint proof")
 			checkpoint_shuttle.statements.append(CheckpointStatement(hash(self.config.data_store)))
 
+			#keeping count of number of checkpoints made to facilitate trigger when needed 
+			if self.config.is_head:
+				self.checkpoint_count += 1
+
 			send(("checkpoint_forward", checkpoint_shuttle), to=self.config.next_replica_id)
 
 
@@ -150,13 +160,38 @@ class Replica(process):
 			if (type == "forward"):
 				log.info(self.INFO + "Adding the hash of the datastore to the checkpoint proof")
 				checkpoint_shuttle.statements.append(CheckpointStatement(hash(self.config.data_store)))
+				
+				#keeping count of number of checkpoints made to facilitate trigger when needed 
+				self.checkpoint_count += 1
+				
+				
+				ret_index = is_failure_condition_satisfied(str("checkpoint_request"))
+				if (self.failure_config_list is not None and ret_index != -1):
+					dummy1, dummy2 = perform_failure_injection(None, \
+						None, self.config.replica_list.index(self.config.id), ret_index)	
+
 				# If Not tail then keep sending it ahead
 				if (not self.config.is_tail):
 					send(("checkpoint_forward", checkpoint_shuttle), to=self.config.next_replica_id)
 				else:
+					self.completed_checkpoint_count += 1
+					
+					ret_index = is_failure_condition_satisfied(str("checkpoint_request"))
+					if (self.failure_config_list is not None and ret_index != -1):
+						dummy1, dummy2 = perform_failure_injection(None, \
+							None, self.config.replica_list.index(self.config.id), ret_index)
+
 					process_checkpoint(checkpoint_shuttle)
 					send(("checkpoint_reverse", checkpoint_shuttle), to=self.config.prev_replica_id)
 			else:
+				#keeping count of number of completed checkpoints made to facilitate trigger when needed 
+				self.completed_checkpoint_count += 1
+				
+				ret_index = is_failure_condition_satisfied(str("checkpoint_request"))
+				if (self.failure_config_list is not None and ret_index != -1):
+					dummy1, dummy2 = perform_failure_injection(None, \
+						None, self.config.replica_list.index(self.config.id), ret_index)
+
 				process_checkpoint(checkpoint_shuttle)
 				if (not self.config.is_head):
 					send(("checkpoint_reverse", checkpoint_shuttle), to=self.config.prev_replica_id)
@@ -167,6 +202,12 @@ class Replica(process):
 
 	def process_checkpoint(checkpoint_shuttle):
 		
+		log.info(self.INFO + "Verifying checkpoint.")
+		if (len(checkpoint_shuttle.statements) < ((len(self.config.replica_list) / 2) + 1)):
+			log.info(self.INFO + "Verification of checkpoint failed, asking olympus to reconfigure")
+		else:
+			log.info(self.INFO + "Checkpoint verification success.")
+
 		# Truncating the history
 		slot_to_truncate = checkpoint_shuttle.slot
 		log.info(self.INFO + "Truncating the history till slot : " + str(slot_to_truncate))
@@ -217,7 +258,13 @@ class Replica(process):
 			verify_key = nacl.signing.VerifyKey(self.config.replica_keys[self.config.replica_list[index]], \
 												encoder=nacl.encoding.HexEncoder)
 			index += 1
-			res = pickle.loads(verify_key.verify(statement))
+
+			res = None
+			try:
+				res = pickle.loads(verify_key.verify(statement))
+			except:
+				log.error(self.INFO + "Signtaure error in the previous statement.")
+				return False
 
 			if (prev_res is not None and (prev_res.operation.type != res.operation.type or \
 				prev_res.operation.data.key != res.operation.data.key or \
@@ -245,38 +292,106 @@ class Replica(process):
 	# This is the main method that checks if it is the right time to trigger
 	# a failure. We use failure configration object for details.
 
+	def failure_config_list_lookup(shuttle_type):
+
+		for index, item in enumerate(self.failure_config_list):
+			if item.shuttle_type == shuttle_type:
+				return index
+		return -1
+
 	def is_failure_condition_satisfied(msg):
 		# If replica has received 'm' messages from a particular client
-		log.info(self.INFO + "checking if failure injection criteria is satisfied for msg " + msg)
-		if (self.failure_config.shuttle_type == CLIENT_REQUEST):
-			if (self.client_counts[self.failure_config.client_id] == self.failure_config.msg_count):
-				# Making -100 so that we dont get this condition again
-				self.client_counts[self.failure_config.client_id] = -100
-				return True
-			return False
+		if self.failure_config_list is None:
+			return -1
+
+		if (msg != "dummy"):
+			log.info(self.INFO + "checking if failure injection criteria is satisfied for msg " + msg)
+		
+		ret_index = failure_config_list_lookup(CLIENT_REQUEST) 
+		if (ret_index != -1):
+			print(self.client_counts[self.failure_config_list[ret_index].client_id])
+			print(self.failure_config_list[ret_index].msg_count)
+			if(self.client_counts[self.failure_config_list[ret_index].client_id] == self.failure_config_list[ret_index].msg_count):
+				if (msg != "dummy"):
+					self.client_counts[self.failure_config_list[ret_index].client_id] = -100
+				return ret_index
+
 		# If replica has received 'm' forwarded message for a particular client
-		elif (self.failure_config.shuttle_type == FORWARDED_REQUEST):
-			if(self.forward_msg_count[self.failure_config.client_id] == self.failure_config.msg_count):
-				self.forward_msg_count[self.failure_config.client_id] = -100
-				return True
-			else:
-				return False
+		ret_index = failure_config_list_lookup(FORWARDED_REQUEST) 
+		if (ret_index != -1):
+			if(self.forward_msg_count[self.failure_config_list[ret_index].client_id] == self.failure_config_list[ret_index].msg_count):
+				if (msg != "dummy"):
+					self.forward_msg_count[self.failure_config_list[ret_index].client_id] = -100
+				return ret_index
+		
 		# We might have to reset count here, so that someother injection 
 		# does not happen becuase of this condition
-		elif (self.failure_config.shuttle_type == SHUTTLE):
-			if (self.forward_shuttle_count[self.failure_config.client_id] == self.failure_config.msg_count):
-				self.forward_shuttle_count[self.failure_config.client_id] = -100
-				return True
-			else:
-				return False
-		elif (self.failure_config.shuttle_type == RESULT_SHUTTLE):
-			if (self.result_shuttle_count[self.failure_config.client_id] == self.failure_config.msg_count):
-				self.result_shuttle_count[self.failure_config.client_id] = -100
-				return True
-			else:
-				return False
-		else:
-			return False
+		ret_index = failure_config_list_lookup(SHUTTLE)
+		'''	
+			print("##################################", ret_index)
+			print(self.config.clients.keys())
+			print(self.failure_config_list[ret_index].client_id)
+			print(self.client_counts)
+			print(self.client_counts[self.failure_config_list[ret_index].client_id])
+			print(self.failure_config_list[ret_index].msg_count)
+		'''
+
+		if (ret_index != -1):
+			if(self.forward_shuttle_count[self.failure_config_list[ret_index].client_id] == self.failure_config_list[ret_index].msg_count):
+				if (msg != "dummy"):
+					self.forward_shuttle_count[self.failure_config_list[ret_index].client_id] = -100
+				return ret_index
+	
+		ret_index = failure_config_list_lookup(RESULT_SHUTTLE) 
+		if (ret_index != -1):
+			if(self.result_shuttle_count[self.failure_config_list[ret_index].client_id] == self.failure_config_list[ret_index].msg_count):
+				if (msg != "dummy"):
+					self.result_shuttle_count[self.failure_config_list[ret_index].client_id] = -100
+				return ret_index
+
+		ret_index = failure_config_list_lookup(WEDGE_REQUEST) 
+		if (ret_index != -1):
+			if (self.wedge_request_count == self.failure_config_list[ret_index].msg_count):
+				if (msg != "dummy"):
+					self.wedge_request_count == -100
+				return ret_index
+		
+		ret_index = failure_config_list_lookup(NEW_CONFIGURATION) 
+		if (ret_index != -1):
+			if (self.config.new_config_count == self.failure_config_list[ret_index].msg_count):
+				if (msg != "dummy"):
+					self.config.new_config_count = -100
+				return ret_index
+
+		ret_index = failure_config_list_lookup(CHECKPOINT) 
+		if (ret_index != -1):
+			if (self.checkpoint_count == self.failure_config_list[ret_index].msg_count):
+				if (msg != "dummy"):
+					self.checkpoint_count = -100
+				return ret_index
+
+		ret_index = failure_config_list_lookup(COMPLETED_CHECKPOINT) 
+		if (ret_index != -1):
+			if (self.completed_checkpoint_count == self.failure_config_list[ret_index].msg_count):
+				if (msg != "dummy"):
+					self.completed_checkpoint_count = -100
+				return ret_index
+
+		ret_index = failure_config_list_lookup(GET_RUNNING_STATE) 
+		if (ret_index != -1):		
+			if (self.get_running_state_req_count == self.failure_config_list[ret_index].msg_count):
+				if (msg != "dummy"):
+					self.get_running_state_req_count = -100
+				return ret_index
+
+		ret_index = failure_config_list_lookup(CATCH_UP) 
+		if (ret_index != -1):		
+			if (self.catch_up_req_count == self.failure_config_list.msg_count):
+				if (msg != "dummy"):
+					self.catch_up_req_count = -100
+				return ret_index
+		
+		return -1
 
 	# This method is the heart of failure injection, it does the following:
 	# 1) Identifies the type of injection to be performed
@@ -284,10 +399,11 @@ class Replica(process):
 	# 3) Add dummy operation to the respective position of the statement
 	# 4) Above is repeated for both order and result shuttle
 
-	def perform_failure_injection(order_shuttle, result_shuttle, index):
-		log.info(self.INFO + "Performing failure injection for msg " + str(result_shuttle.msg_id))
-		
-		for opt in self.failure_config.opt_type:
+	def perform_failure_injection(order_shuttle, result_shuttle, index, failure_config_index):
+		#log.info(self.INFO + "Performing failure injection for msg " + str(result_shuttle.msg_id))
+		#log.info(self.INFO + "Performing failure injection for msg ")
+
+		for idx, opt in enumerate(self.failure_config_list[failure_config_index].opt_type):
 			log.info(self.INFO + " Performing failure operation : " + str(opt))
 			# Here lets change the statement of index that is sent below in both order and result shuttle
 			if (opt == CHANGE_OPT):
@@ -299,40 +415,85 @@ class Replica(process):
 				# If trigger type is result shuttle then order shuttle received will be None
 				if (order_shuttle != None):
 					res = pickle.loads(verify_key.verify(order_shuttle.statements[index]))
-					
 					# creating a wrong operation object
 					operation = Operation(GET, res.operation.msg_id, Data(None, 'X'), res.operation.client_id)
-
 					# Modifying original order statement of this replica to something wrong
 					order_shuttle.statements[index] = sign_statement(OrderStatement(res.slot, \
-															operation, self.config.id))
-					
+															operation, self.config.id),False)
 				# Decrypting the result statement first
 				res = pickle.loads(verify_key.verify(result_shuttle.statements[index]))
 				operation = Operation(GET, res.operation.msg_id, Data(None, 'X'), res.operation.client_id)			
 
 				# Modifying original result statement of this replica to something wrong
-				result_shuttle.statements[index] = sign_statement(ResultStatement(res.result,operation))
+				result_shuttle.statements[index] = sign_statement(ResultStatement(res.result,operation),False)
 				
 			elif (opt == DROP_RESULT):
 				log.info(self.INFO + "Dropping head result statement.")
 				# Drop the result statement of the head
 				del result_shuttle.statements[0]
+
 			elif (opt == CHANGE_RES):
 				log.info(self.INFO + "Adding fake hash(OK) as result hash.")
-
 				verify_key = nacl.signing.VerifyKey(self.config.replica_keys[self.config.replica_list[index]], \
 													encoder=nacl.encoding.HexEncoder)
-
 				# Decrypting the result statement first
 				res = pickle.loads(verify_key.verify(result_shuttle.statements[index]))
 				# We add hash of OK always
-				fake_result = hash(OK)
+				print("ABRA : ",hash("abracadabra"))
+				fake_result = hash("abracadabra")
 				# Modifying original result statement of this replica to something wrong
-				result_shuttle.statements[index] = sign_statement(ResultStatement(fake_result,res.operation))
+				result_shuttle.statements[index] = sign_statement(ResultStatement(fake_result,res.operation),False)
+			
+			elif (opt == CRASH):
+				log.info(self.INFO + "Performing crash injection and killing self")
+				os._exit(-1)
+			
+			elif (opt == SLEEP):
+				log.info(self.INFO + "Injection operation sleep. I am sleeping for sometime.")
+				time.sleep(int(self.failure_config_list[failure_config_index].opt_arg[idx])) # put variable instead of static time
+
+			elif (opt == TURNCATE_HISTORY):
+				log.info(self.INFO + "turncate_history operation is being injected")
+				print("turncate_history operation is being injected")
+				n = int(self.failure_config_list[failure_config_index].opt_arg[idx]) # put variable instead of static number
+				print ("failure index n", n)
+
+				if len(self.history) < n:
+					print("history not enough to turncate")
+					log.error(self.INFO + "not enogh history to turncate")
+				else:
+					print("turncating history")
+					log.info(self.INFO + "turncating history")
+					for i in range(n):
+						self.history.pop()
+
+			elif (opt == DROP):
+				log.info(self.INFO + "drop failure is being injected")
+				print("injecting drop faliure")
+				return True, True
+
+			elif (opt == INCREMENT_SLOT):
+				log.info(self.INFO + "increment slot failure is being injected")
+				print("injecting increment slot failure")
+				get_next_slot()
+
+			elif (opt == INVALID_ORDER_SIG or opt == INVALID_RESULT_SIG):
+				verify_key = nacl.signing.VerifyKey(self.config.replica_keys[self.config.replica_list[index]], \
+													encoder=nacl.encoding.HexEncoder)
+				if (order_shuttle != None):
+					res = pickle.loads(verify_key.verify(order_shuttle.statements[index]))
+					
+					order_shuttle.statements[index] = sign_statement(res, True)
+
+				# Decrypting the result statement first
+				res = pickle.loads(verify_key.verify(result_shuttle.statements[index]))
+
+				# Modifying original result statement of this replica to something wrong
+				result_shuttle.statements[index] = sign_statement(res, True)
 
 			else:
 				log.info(self.INFO + "Failure injection operation not recognized")
+
 
 		return order_shuttle, result_shuttle
 
@@ -351,6 +512,10 @@ class Replica(process):
 		operation = order_shuttle.operation
 
 		slot =  order_shuttle.slot
+		
+		# This is required so that each replicas will know current slot.
+		init_slot(slot)
+
 		log.info(self.INFO + "Received shuttle from "+ str(replica) \
 				+" for msg "+str(operation.msg_id))
 
@@ -368,7 +533,7 @@ class Replica(process):
 
 		log.info(self.INFO + "Hashing the result and signing the statments for msg "+ str(operation.msg_id))
 		order_shuttle.statements.append(sign_statement(OrderStatement(slot, \
-										operation, self.config.id)))
+										operation, self.config.id), False))
 
 		# add order shuttle to current replicas history
 		self.history.append(order_shuttle)
@@ -381,7 +546,7 @@ class Replica(process):
 			return
 
 		result_statement = ResultStatement(hash(result),operation)
-		result_shuttle.statements.append(sign_statement(result_statement))
+		result_shuttle.statements.append(sign_statement(result_statement, False))
 		self.latest_result[operation.client_id] = (result_statement, result)
 
 		# Verify the result shuttle before it is sent ahead
@@ -395,12 +560,20 @@ class Replica(process):
 		result_shuttle.result = result
 
 		# This is used to inject failure.
-		if (self.failure_config is not None and is_failure_condition_satisfied(str(operation.msg_id))):
+		ret_index = is_failure_condition_satisfied(str(operation.msg_id))
+		if (self.failure_config_list is not None and ret_index != -1):
+			print("failure condition is satisfied for forward shuttle")
 			log.info(self.INFO + "Failure Injection condition satisfied for msg "+ str(operation.msg_id))
 			order_shuttle, result_shuttle = perform_failure_injection(order_shuttle, \
-						result_shuttle, self.config.replica_list.index(self.config.id))
+						result_shuttle, self.config.replica_list.index(self.config.id), ret_index)
+		'''
+		print("Returning index : ", ret_index)
+		verify_key = nacl.signing.VerifyKey(self.config.replica_keys[self.config.id], encoder=nacl.encoding.HexEncoder)
+				# Decrypting the result statement first
+		res = pickle.loads(verify_key.verify(result_shuttle.statements[ret_index]))
 
-
+		print("BUGGER : ", res.result)
+		'''
 		# We have to send result to client and start result shuttle message
 		# backwards if it is a tail, else just forward the shuttle.
 		if (self.config.is_tail):
@@ -427,7 +600,7 @@ class Replica(process):
 			log.info(self.INFO + "Sending result to client " + str(order_shuttle.client_id) \
 					+ " for msg " + str(result_shuttle.msg_id))
 
-			if (self.config.testcase_name != "testing_retransmission" and self.config.testcase_name != "test_saved_cache" \
+			if (self.config.testcase_name != "testing_retrinansmission" and self.config.testcase_name != "test_saved_cache" \
 				and self.config.testcase_name != "forwarded_request"):
 				send(("result", response), to=order_shuttle.client_id)
 			# send result shuttle back
@@ -453,11 +626,12 @@ class Replica(process):
 			
 			# While shuttle is going back if condition failure condition is satisfied we 
 			# inject the failure. order_shuttle will be None
-
-			if (self.failure_config is not None and is_failure_condition_satisfied(str(result_shuttle.msg_id))):
+			ret_index = is_failure_condition_satisfied(str(result_shuttle.msg_id))
+			if (self.failure_config_list is not None and ret_index != -1):
 				log.info(self.INFO + "Failure Injection condition satisfied.")
 				dummy, result_shuttle = perform_failure_injection(None, \
-						result_shuttle, self.config.replica_list.index(self.config.id))
+						result_shuttle, self.config.replica_list.index(self.config.id), ret_index)
+			
 
 			# We have received this result shuttle as a part of reconfig, so timers are running
 			if (self.msg_cache[result_shuttle.msg_id] is not None):
@@ -479,8 +653,20 @@ class Replica(process):
 			return
 
 	# Helper to sign the statements that we receive
-	def sign_statement(statement):
-		return self.config.signing_key.sign(pickle.dumps(statement))
+	def sign_statement(statement, make_invalid):
+		if make_invalid:
+			log.info(self.INFO + "Altering the signature.")
+			invalid_signed = invalidate_sign(self.config.signing_key.sign(pickle.dumps(statement)))
+			return invalid_signed
+		else:
+			return self.config.signing_key.sign(pickle.dumps(statement))
+
+	def invalidate_sign(signed):
+		signedlist = list(signed)
+		signedlist[0] = (signedlist[0] + 1) % 256
+		newsigned=bytes(signedlist)
+		invalid_signed = nacl.signing.SignedMessage._from_parts(signed._signature, signed._message, newsigned)
+		return invalid_signed
 
 	# Helper to hash the result.
 	def hash(result):
@@ -492,7 +678,7 @@ class Replica(process):
 	# We also check for any triggers that head is supposed to carry on.
 
 	def send_new_shuttle(operation, client):
-		slot = get_next_slot()
+		slot = get_next_slot()	
 
 		log.info(self.INFO + "slot number : " + str(slot))
 
@@ -508,7 +694,7 @@ class Replica(process):
 		order_shuttle =  OrderShuttle(slot, operation, client)
 		# Add the first order statement
 		order_shuttle.statements.append(sign_statement(OrderStatement(slot, \
-													operation, self.config.id)))
+													operation, self.config.id), False))
 
 		# add order shuttle to current replicas history
 		self.history.append(order_shuttle)
@@ -520,17 +706,16 @@ class Replica(process):
 		# TODO - Need to encrypt result
 
 		result_statement = ResultStatement(hash(result),operation)
-		result_shuttle.statements.append(sign_statement(result_statement))
+		result_shuttle.statements.append(sign_statement(result_statement, False))
 		self.latest_result[operation.client_id] = (result_statement, result)
 
 		# This checks if we are supposed to inject some failure before sending 
 		# the shuttle ahead
-
-		if ((self.failure_config is not None and is_failure_condition_satisfied(str(operation.msg_id))\
-			or self.tamper_next_send == True)):
+		ret_index = is_failure_condition_satisfied(str(operation.msg_id))
+		if (self.failure_config_list is not None and ret_index != -1 or self.tamper_next_send == True):
 			log.info(self.INFO + "Failure Injection condition satisfied.")
-			order_shuttle, result_shuttle = perform_failure_injection(order_shuttle, result_shuttle, 0)
-
+			order_shuttle, result_shuttle = perform_failure_injection(order_shuttle, result_shuttle, 0, ret_index)
+		
 		log.info(self.INFO + "Hashing the result and signing the statments for msg "+ str(operation.msg_id))
 		# Same send will be used for both order and result shuttle down the chain
 		log.info(self.INFO + "Forwarding the shuttle with signed stmnts for msg "+ str(operation.msg_id) \
@@ -616,11 +801,19 @@ class Replica(process):
 		# This is the case when shuttle is moving down
 		if (operation == None):
 			opt = order_shuttle.operation
-		else:
+		else:																						
 			# If we receive operation object then it is coming from client
 			self.client_counts[sender] += 1
-			#print("*************",self.client_counts)
 			opt = operation
+
+		ret_index = is_failure_condition_satisfied(str("dummy"))
+		if (self.failure_config_list is not None and ret_index != -1 and (DROP in self.failure_config_list[ret_index].opt_type)):
+			log.info(self.INFO + "Failure condition satisfied for msg " + str(opt.msg_id))
+			dummy1, dummy2 = perform_failure_injection(None, \
+						None, self.config.replica_list.index(self.config.id), ret_index)
+
+			if dummy1 == True or dummy2 == True:
+				return
 
 		if (self.config.mode == ACTIVE):
 			handle_transmission(operation=opt, sender=sender, result_shuttle=result_shuttle, \
@@ -640,7 +833,9 @@ class Replica(process):
 				log.info(self.INFO + "Received retransmission forward from replicas")
 
 				# To check trigger for forwarded request
-				if (self.failure_config is not None and is_failure_condition_satisfied(str(operation.msg_id))):
+				
+				ret_index = is_failure_condition_satisfied(str(operation.msg_id))
+				if (self.failure_config_list is not None and ret_index != -1 and (DROP in self.failure_config_list[ret_index].opt_type)):
 					log.info(self.INFO + "Failure Injection condition satisfied for msg "+ str(operation.msg_id))
 					self.tamper_next_send = True
 			else:
@@ -659,14 +854,9 @@ class Replica(process):
 			send_result_backward(result_shuttle)
 
 	# This receives failure config if this replica is supposed to inject anything
-	def receive(msg=('failure_config', failure_config), from_=o):
+	def receive(msg=('failure_config_list', failure_config_list), from_=o):
 		log.info(self.INFO + "Received failure config from olympus")
-		log.info(self.INFO + "Failure config : client id-" + str(failure_config.client_id) + \
-				", msg_count-" + str(failure_config.msg_count) + ", type-" + \
-				failure_config.shuttle_type +", operation-" + \
-				str(failure_config.opt_type))
-
-		self.failure_config = failure_config
+		self.failure_config_list = failure_config_list
 
 	# This receives client details from olympus, we need this because we start
 	# replicas before all clients register
@@ -711,6 +901,17 @@ class Replica(process):
 		wedged_data = wedgedData(self.config.id, self.history, self.checkpoint, get_current_slot())
 		# TODO - signing the wedged_data
 		#wedged_data = sign_statement(wedged_data)
+		# increasing the wedge_count to appropriately trigger wedge_request failure
+		wedge_request_count += 1
+
+		ret_index = is_failure_condition_satisfied(str("wedge_request"))
+		if (self.failure_config_list is not None and ret_index != -1 and (DROP in self.failure_config_list[ret_index].opt_type)):
+			print("failure condition satisfied for wedged request, now injecting failure")
+			dummy1, dummy2 = perform_failure_injection(None, \
+						None, self.config.replica_list.index(self.config.id), ret_index)
+
+			if dummy1 == True or dummy2 == True:
+				return
 
 		send(("wedged_data", wedged_data), to=self.olympus)
 		log.info(self.INFO + "State changed to immutable.")
@@ -722,6 +923,18 @@ class Replica(process):
 		catch_up(longest_history)
 
 	def receive(msg=("running_state"), from_=o):
+		# Count to handle receipt of m'th get_running_state message failure trigger
+		self.get_running_state_req_count += 1
+
+		ret_index = is_failure_condition_satisfied(str("running_state_request"))
+		if (self.failure_config_list is not None and ret_index != -1):
+			print("failure condition satisfied for get_running_state request, now injecting failure")
+			dummy1, dummy2 = perform_failure_injection(None, \
+						None, self.config.replica_list.index(self.config.id), ret_index)
+
+			if dummy1 == True or dummy2 == True:
+				return
+
 		log.info(self.INFO + "Received request for running state, encrypting and sending the state")
 		if (len(self.data_store_backup) > 0):
 			send(("running_state_data", self.data_store_backup), to=o)

@@ -1,0 +1,630 @@
+2017-11-21 21:56:50 INFO     [MAIN] Using custom config : ../config/testing.config
+2017-11-21 21:56:50 INFO     INIT_CONFIG: {'checkpoint_num': '2', 'head_timeout': '10', 'workload[1]': "put('movie','star');slice('movie','0:4');append('movie',' wars');get('movie')", 'workload[2]': "put('jedi','luke skywalker');slice('jedi','0:4'); get('jedi')", 'client_hosts': '1;0;2', 'test_case_name': 'test_signature', 't': '1', 'replica_hosts': '0;1;2', 'failures[0,1]': 'completed_checkpoint(2),sleep(12)', 'nonhead_timeout': '10', 'num_client': '3', 'hosts': 'localhost; 192.168.0.3; 192.168.0.4', 'client_timeout': '10', 'workload[0]': 'pseudorandom(233,5)'}
+2017-11-21 21:56:50 INFO     [MAIN] Initializing olympus
+2017-11-21 21:56:50 INFO     [OLYMPUS] Olympus setup complete, assigned ID :380c6fdc-d1c4-4927-afab-c5245e6768f3
+2017-11-21 21:56:50 INFO     [OLYMPUS] Running test case : test_signature
+2017-11-21 21:56:50 INFO     [OLYMPUS] Creating new replicas.
+2017-11-21 21:56:50 INFO     [MAIN] Initializing clients
+2017-11-21 21:57:00 INFO     [OLYMPUS] Generating signing and verification keys.
+2017-11-21 21:57:00 INFO     [OLYMPUS] Head is <Replica:fc402#Node0>
+2017-11-21 21:57:00 INFO     [Replica:fc402#Node0] Setup complete
+2017-11-21 21:57:00 INFO     [Replica:43c02#Node1] Setup complete
+2017-11-21 21:57:00 INFO     [OLYMPUS] Tail is <Replica:ce802#Node2>
+2017-11-21 21:57:00 INFO     [Replica:ce802#Node2] Setup complete
+2017-11-21 21:57:00 INFO     [MAIN] Generating Random Workload
+2017-11-21 21:57:00 INFO     [MAIN] Populating Random Workload Operations
+2017-11-21 21:57:00 INFO     [Client:43c03#Node1] Setup complete
+2017-11-21 21:57:00 INFO     [OLYMPUS] Chain---> <Replica:fc402#Node0>--><Replica:43c02#Node1>--><Replica:ce802#Node2>-->
+2017-11-21 21:57:00 INFO     [OLYMPUS] CURRENT CONFIG : 311a7828-4b57-46c0-9908-730d63b88533
+2017-11-21 21:57:00 INFO     [Client:43c03#Node1] Waiting till we receive all replica details from olympus
+2017-11-21 21:57:00 INFO     [OLYMPUS] Received request to register client : <Client:43c03#Node1>
+2017-11-21 21:57:00 INFO     [OLYMPUS] Sending replica details to client <Client:43c03#Node1>
+2017-11-21 21:57:00 INFO     [Client:fc403#Node0] Setup complete
+2017-11-21 21:57:00 INFO     [Client:43c03#Node1] Received replica details from olympus
+2017-11-21 21:57:00 INFO     [Client:fc403#Node0] Waiting till we receive all replica details from olympus
+2017-11-21 21:57:00 INFO     [OLYMPUS] Received request to register client : <Client:fc403#Node0>
+2017-11-21 21:57:00 INFO     [OLYMPUS] Sending replica details to client <Client:fc403#Node0>
+2017-11-21 21:57:00 INFO     [Client:ce803#Node2] Setup complete
+2017-11-21 21:57:00 INFO     [Client:fc403#Node0] Received replica details from olympus
+2017-11-21 21:57:00 INFO     [Client:ce803#Node2] Waiting till we receive all replica details from olympus
+2017-11-21 21:57:00 INFO     [OLYMPUS] Received request to register client : <Client:ce803#Node2>
+2017-11-21 21:57:00 INFO     [OLYMPUS] Sending replica details to client <Client:ce803#Node2>
+2017-11-21 21:57:00 INFO     [Client:ce803#Node2] Received replica details from olympus
+2017-11-21 21:57:00 INFO     [Replica:fc402#Node0] Received client information
+2017-11-21 21:57:00 INFO     [Replica:fc402#Node0] Olympus info registered : <Olympus:96802#Node>
+2017-11-21 21:57:00 INFO     [Replica:43c02#Node1] Received client information
+2017-11-21 21:57:00 INFO     [Replica:43c02#Node1] Olympus info registered : <Olympus:96802#Node>
+2017-11-21 21:57:00 INFO     [Client:43c03#Node1]  Current active config : 311a7828-4b57-46c0-9908-730d63b88533
+2017-11-21 21:57:00 INFO     [Replica:ce802#Node2] Received client information
+2017-11-21 21:57:00 INFO     [Replica:ce802#Node2] Olympus info registered : <Olympus:96802#Node>
+2017-11-21 21:57:00 INFO     [OLYMPUS] Sending failure config to <Replica:fc402#Node0>
+2017-11-21 21:57:00 INFO     [Client:fc403#Node0]  Current active config : 311a7828-4b57-46c0-9908-730d63b88533
+2017-11-21 21:57:00 INFO     [Client:ce803#Node2]  Current active config : 311a7828-4b57-46c0-9908-730d63b88533
+2017-11-21 21:57:00 INFO     [Replica:fc402#Node0] Received failure config from olympus
+2017-11-21 21:57:01 INFO     [Client:43c03#Node1] sending operation request to<Replica:fc402#Node0> with msgID : ee52e96c-2df6-448f-ba93-dc6a67fa7131 operation : {get(None,movie1)}
+2017-11-21 21:57:01 INFO     [Client:ce803#Node2] sending operation request to<Replica:fc402#Node0> with msgID : c4a1a9c8-f7e6-40d5-8f79-021ff2ee0b07 operation : {put(jedi,luke skywalker)}
+2017-11-21 21:57:01 INFO     [Client:fc403#Node0] sending operation request to<Replica:fc402#Node0> with msgID : 153b93e1-0fdd-4490-8ef2-cda06d466a2f operation : {put(movie,star)}
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] Received operation {get(movie1)} with msg id ee52e96c-2df6-448f-ba93-dc6a67fa7131
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] slot number : 1
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg ee52e96c-2df6-448f-ba93-dc6a67fa7131
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] Hashing the result and signing the statments for msg ee52e96c-2df6-448f-ba93-dc6a67fa7131
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] Forwarding the shuttle with signed stmnts for msg ee52e96c-2df6-448f-ba93-dc6a67fa7131 to <Replica:43c02#Node1>
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] Received operation {put(jedi,luke skywalker)} with msg id c4a1a9c8-f7e6-40d5-8f79-021ff2ee0b07
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] slot number : 2
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Received shuttle from <Replica:fc402#Node0> for msg ee52e96c-2df6-448f-ba93-dc6a67fa7131
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg c4a1a9c8-f7e6-40d5-8f79-021ff2ee0b07
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Hashing the result and signing the statments for msg ee52e96c-2df6-448f-ba93-dc6a67fa7131
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] Hashing the result and signing the statments for msg c4a1a9c8-f7e6-40d5-8f79-021ff2ee0b07
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] Forwarding the shuttle with signed stmnts for msg c4a1a9c8-f7e6-40d5-8f79-021ff2ee0b07 to <Replica:43c02#Node1>
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Verifying order_proof
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] Checkpoint criteria satisfied.
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] Starting checkpoint shuttle.
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] Adding the hash of the datastore to the checkpoint proof
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Verification of order_proof succesful for msg ee52e96c-2df6-448f-ba93-dc6a67fa7131
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] Received operation {put(movie,star)} with msg id 153b93e1-0fdd-4490-8ef2-cda06d466a2f
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Verifying result_proof
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] slot number : 3
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg 153b93e1-0fdd-4490-8ef2-cda06d466a2f
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] Hashing the result and signing the statments for msg 153b93e1-0fdd-4490-8ef2-cda06d466a2f
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Verification of result_proof succesful for msg ee52e96c-2df6-448f-ba93-dc6a67fa7131
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] Forwarding the shuttle with signed stmnts for msg 153b93e1-0fdd-4490-8ef2-cda06d466a2f to <Replica:43c02#Node1>
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Forwarding the shuttle with signed stmts to <Replica:ce802#Node2> for msg ee52e96c-2df6-448f-ba93-dc6a67fa7131
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Received shuttle from <Replica:43c02#Node1> for msg ee52e96c-2df6-448f-ba93-dc6a67fa7131
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Received shuttle from <Replica:fc402#Node0> for msg c4a1a9c8-f7e6-40d5-8f79-021ff2ee0b07
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Hashing the result and signing the statments for msg ee52e96c-2df6-448f-ba93-dc6a67fa7131
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Hashing the result and signing the statments for msg c4a1a9c8-f7e6-40d5-8f79-021ff2ee0b07
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Verifying order_proof
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Verifying order_proof
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Verification of order_proof succesful for msg ee52e96c-2df6-448f-ba93-dc6a67fa7131
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Verification of order_proof succesful for msg c4a1a9c8-f7e6-40d5-8f79-021ff2ee0b07
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Verifying result_proof
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Verifying result_proof
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Verification of result_proof succesful for msg c4a1a9c8-f7e6-40d5-8f79-021ff2ee0b07
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Forwarding the shuttle with signed stmts to <Replica:ce802#Node2> for msg c4a1a9c8-f7e6-40d5-8f79-021ff2ee0b07
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Verification of result_proof succesful for msg ee52e96c-2df6-448f-ba93-dc6a67fa7131
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Datastore before sending to client : {}
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Sending result to client <Client:43c03#Node1> for msg ee52e96c-2df6-448f-ba93-dc6a67fa7131
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Received checkpoint shuttle from <Replica:fc402#Node0>
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Adding the hash of the datastore to the checkpoint proof
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Received shuttle from <Replica:fc402#Node0> for msg 153b93e1-0fdd-4490-8ef2-cda06d466a2f
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Hashing the result and signing the statments for msg 153b93e1-0fdd-4490-8ef2-cda06d466a2f
+2017-11-21 21:57:01 INFO     [Client:43c03#Node1] Received result for msg ee52e96c-2df6-448f-ba93-dc6a67fa7131
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Verifying order_proof
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Received shuttle from <Replica:43c02#Node1> for msg c4a1a9c8-f7e6-40d5-8f79-021ff2ee0b07
+2017-11-21 21:57:01 INFO     [Client:43c03#Node1] Verifying result for msg ee52e96c-2df6-448f-ba93-dc6a67fa7131
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Hashing the result and signing the statments for msg c4a1a9c8-f7e6-40d5-8f79-021ff2ee0b07
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Verification of order_proof succesful for msg 153b93e1-0fdd-4490-8ef2-cda06d466a2f
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Verifying order_proof
+2017-11-21 21:57:01 INFO     [Client:43c03#Node1] Valid t+1 found.
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Verifying result_proof
+2017-11-21 21:57:01 INFO     [Client:43c03#Node1] Verification of result for msg ee52e96c-2df6-448f-ba93-dc6a67fa7131 succesful.
+2017-11-21 21:57:01 INFO     [Client:43c03#Node1] Result verified for msg ee52e96c-2df6-448f-ba93-dc6a67fa7131 and the result is : 
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Verification of result_proof succesful for msg 153b93e1-0fdd-4490-8ef2-cda06d466a2f
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Forwarding the shuttle with signed stmts to <Replica:ce802#Node2> for msg 153b93e1-0fdd-4490-8ef2-cda06d466a2f
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Verification of order_proof succesful for msg c4a1a9c8-f7e6-40d5-8f79-021ff2ee0b07
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Verifying result_proof
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Verifying result_proof_reverse_direction
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Verification of result_proof succesful for msg c4a1a9c8-f7e6-40d5-8f79-021ff2ee0b07
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Verification of result_proof_reverse_direction succesful for msg ee52e96c-2df6-448f-ba93-dc6a67fa7131
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Datastore before sending to client : {'jedi': ['luke skywalker']}
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Result shuttle received for msg - ee52e96c-2df6-448f-ba93-dc6a67fa7131, caching the result.
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Sending result to client <Client:ce803#Node2> for msg c4a1a9c8-f7e6-40d5-8f79-021ff2ee0b07
+2017-11-21 21:57:01 INFO     [Client:ce803#Node2] Received result for msg c4a1a9c8-f7e6-40d5-8f79-021ff2ee0b07
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Received checkpoint shuttle from <Replica:43c02#Node1>
+2017-11-21 21:57:01 INFO     [Client:ce803#Node2] Verifying result for msg c4a1a9c8-f7e6-40d5-8f79-021ff2ee0b07
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] Verifying result_proof_reverse_direction
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Adding the hash of the datastore to the checkpoint proof
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Verifying checkpoint.
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Checkpoint verification success.
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Truncating the history till slot : 1
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Saving the checkpoint information.
+2017-11-21 21:57:01 INFO     [Client:ce803#Node2] Valid t+1 found.
+2017-11-21 21:57:01 INFO     [Client:ce803#Node2] Verification of result for msg c4a1a9c8-f7e6-40d5-8f79-021ff2ee0b07 succesful.
+2017-11-21 21:57:01 INFO     [Client:ce803#Node2] Result verified for msg c4a1a9c8-f7e6-40d5-8f79-021ff2ee0b07 and the result is : OK
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Verifying result_proof_reverse_direction
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] Verification of result_proof_reverse_direction succesful for msg ee52e96c-2df6-448f-ba93-dc6a67fa7131
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] Result shuttle received for msg - ee52e96c-2df6-448f-ba93-dc6a67fa7131, caching the result.
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg ee52e96c-2df6-448f-ba93-dc6a67fa7131
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Received shuttle from <Replica:43c02#Node1> for msg 153b93e1-0fdd-4490-8ef2-cda06d466a2f
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Hashing the result and signing the statments for msg 153b93e1-0fdd-4490-8ef2-cda06d466a2f
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Verifying order_proof
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Verification of result_proof_reverse_direction succesful for msg c4a1a9c8-f7e6-40d5-8f79-021ff2ee0b07
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Result shuttle received for msg - c4a1a9c8-f7e6-40d5-8f79-021ff2ee0b07, caching the result.
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Verification of order_proof succesful for msg 153b93e1-0fdd-4490-8ef2-cda06d466a2f
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Verifying result_proof
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Received checkpoint shuttle from <Replica:ce802#Node2>
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Verifying checkpoint.
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Checkpoint verification success.
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Truncating the history till slot : 1
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Saving the checkpoint information.
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Verification of result_proof succesful for msg 153b93e1-0fdd-4490-8ef2-cda06d466a2f
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Datastore before sending to client : {'jedi': ['luke skywalker'], 'movie': ['star']}
+2017-11-21 21:57:01 INFO     [Replica:ce802#Node2] Sending result to client <Client:fc403#Node0> for msg 153b93e1-0fdd-4490-8ef2-cda06d466a2f
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] Verifying result_proof_reverse_direction
+2017-11-21 21:57:01 INFO     [Client:fc403#Node0] Received result for msg 153b93e1-0fdd-4490-8ef2-cda06d466a2f
+2017-11-21 21:57:01 INFO     [Client:fc403#Node0] Verifying result for msg 153b93e1-0fdd-4490-8ef2-cda06d466a2f
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] Verification of result_proof_reverse_direction succesful for msg c4a1a9c8-f7e6-40d5-8f79-021ff2ee0b07
+2017-11-21 21:57:01 INFO     [Client:fc403#Node0] Valid t+1 found.
+2017-11-21 21:57:01 INFO     [Client:fc403#Node0] Verification of result for msg 153b93e1-0fdd-4490-8ef2-cda06d466a2f succesful.
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] Result shuttle received for msg - c4a1a9c8-f7e6-40d5-8f79-021ff2ee0b07, caching the result.
+2017-11-21 21:57:01 INFO     [Client:fc403#Node0] Result verified for msg 153b93e1-0fdd-4490-8ef2-cda06d466a2f and the result is : OK
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg c4a1a9c8-f7e6-40d5-8f79-021ff2ee0b07
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] Received checkpoint shuttle from <Replica:43c02#Node1>
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg checkpoint_request
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] Verifying checkpoint.
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] Checkpoint verification success.
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] Truncating the history till slot : 1
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] Saving the checkpoint information.
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Verifying result_proof_reverse_direction
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Verification of result_proof_reverse_direction succesful for msg 153b93e1-0fdd-4490-8ef2-cda06d466a2f
+2017-11-21 21:57:01 INFO     [Replica:43c02#Node1] Result shuttle received for msg - 153b93e1-0fdd-4490-8ef2-cda06d466a2f, caching the result.
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] Verifying result_proof_reverse_direction
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] Verification of result_proof_reverse_direction succesful for msg 153b93e1-0fdd-4490-8ef2-cda06d466a2f
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] Result shuttle received for msg - 153b93e1-0fdd-4490-8ef2-cda06d466a2f, caching the result.
+2017-11-21 21:57:01 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg 153b93e1-0fdd-4490-8ef2-cda06d466a2f
+2017-11-21 21:57:02 INFO     [Client:43c03#Node1] sending operation request to<Replica:fc402#Node0> with msgID : b6c6e6ad-c4e8-4d44-a8a5-8a7fcbe0a182 operation : {get(None,movie3)}
+2017-11-21 21:57:02 INFO     [Replica:fc402#Node0] Received operation {get(movie3)} with msg id b6c6e6ad-c4e8-4d44-a8a5-8a7fcbe0a182
+2017-11-21 21:57:02 INFO     [Replica:fc402#Node0] slot number : 4
+2017-11-21 21:57:02 INFO     [Client:ce803#Node2] sending operation request to<Replica:fc402#Node0> with msgID : e34e2445-8f7a-43b1-a502-f17df5f9b131 operation : {slice(jedi,0:4)}
+2017-11-21 21:57:02 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg b6c6e6ad-c4e8-4d44-a8a5-8a7fcbe0a182
+2017-11-21 21:57:02 INFO     [Replica:fc402#Node0] Hashing the result and signing the statments for msg b6c6e6ad-c4e8-4d44-a8a5-8a7fcbe0a182
+2017-11-21 21:57:02 INFO     [Replica:fc402#Node0] Forwarding the shuttle with signed stmnts for msg b6c6e6ad-c4e8-4d44-a8a5-8a7fcbe0a182 to <Replica:43c02#Node1>
+2017-11-21 21:57:02 INFO     [Replica:fc402#Node0] Checkpoint criteria satisfied.
+2017-11-21 21:57:02 INFO     [Replica:fc402#Node0] Starting checkpoint shuttle.
+2017-11-21 21:57:02 INFO     [Replica:fc402#Node0] Adding the hash of the datastore to the checkpoint proof
+2017-11-21 21:57:02 INFO     [Client:fc403#Node0] sending operation request to<Replica:fc402#Node0> with msgID : 1d195e6a-13f6-477e-ae89-cdb8229a368c operation : {slice(movie,0:4)}
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Received shuttle from <Replica:fc402#Node0> for msg b6c6e6ad-c4e8-4d44-a8a5-8a7fcbe0a182
+2017-11-21 21:57:02 INFO     [Replica:fc402#Node0] Received operation {slice(jedi,0:4)} with msg id e34e2445-8f7a-43b1-a502-f17df5f9b131
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Hashing the result and signing the statments for msg b6c6e6ad-c4e8-4d44-a8a5-8a7fcbe0a182
+2017-11-21 21:57:02 INFO     [Replica:fc402#Node0] slot number : 5
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Verifying order_proof
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Verification of order_proof succesful for msg b6c6e6ad-c4e8-4d44-a8a5-8a7fcbe0a182
+2017-11-21 21:57:02 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg e34e2445-8f7a-43b1-a502-f17df5f9b131
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Verifying result_proof
+2017-11-21 21:57:02 INFO     [Replica:fc402#Node0] Hashing the result and signing the statments for msg e34e2445-8f7a-43b1-a502-f17df5f9b131
+2017-11-21 21:57:02 INFO     [Replica:fc402#Node0] Forwarding the shuttle with signed stmnts for msg e34e2445-8f7a-43b1-a502-f17df5f9b131 to <Replica:43c02#Node1>
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Verification of result_proof succesful for msg b6c6e6ad-c4e8-4d44-a8a5-8a7fcbe0a182
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Forwarding the shuttle with signed stmts to <Replica:ce802#Node2> for msg b6c6e6ad-c4e8-4d44-a8a5-8a7fcbe0a182
+2017-11-21 21:57:02 INFO     [Replica:fc402#Node0] Received operation {slice(movie,0:4)} with msg id 1d195e6a-13f6-477e-ae89-cdb8229a368c
+2017-11-21 21:57:02 INFO     [Replica:fc402#Node0] slot number : 6
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Received checkpoint shuttle from <Replica:fc402#Node0>
+2017-11-21 21:57:02 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg 1d195e6a-13f6-477e-ae89-cdb8229a368c
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Adding the hash of the datastore to the checkpoint proof
+2017-11-21 21:57:02 INFO     [Replica:fc402#Node0] Hashing the result and signing the statments for msg 1d195e6a-13f6-477e-ae89-cdb8229a368c
+2017-11-21 21:57:02 INFO     [Replica:fc402#Node0] Forwarding the shuttle with signed stmnts for msg 1d195e6a-13f6-477e-ae89-cdb8229a368c to <Replica:43c02#Node1>
+2017-11-21 21:57:02 INFO     [Replica:fc402#Node0] Checkpoint criteria satisfied.
+2017-11-21 21:57:02 INFO     [Replica:fc402#Node0] Starting checkpoint shuttle.
+2017-11-21 21:57:02 INFO     [Replica:fc402#Node0] Adding the hash of the datastore to the checkpoint proof
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Received shuttle from <Replica:43c02#Node1> for msg b6c6e6ad-c4e8-4d44-a8a5-8a7fcbe0a182
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Received shuttle from <Replica:fc402#Node0> for msg e34e2445-8f7a-43b1-a502-f17df5f9b131
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Hashing the result and signing the statments for msg e34e2445-8f7a-43b1-a502-f17df5f9b131
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Hashing the result and signing the statments for msg b6c6e6ad-c4e8-4d44-a8a5-8a7fcbe0a182
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Verifying order_proof
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Verifying order_proof
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Verification of order_proof succesful for msg e34e2445-8f7a-43b1-a502-f17df5f9b131
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Verification of order_proof succesful for msg b6c6e6ad-c4e8-4d44-a8a5-8a7fcbe0a182
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Verifying result_proof
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Verifying result_proof
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Verification of result_proof succesful for msg e34e2445-8f7a-43b1-a502-f17df5f9b131
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Forwarding the shuttle with signed stmts to <Replica:ce802#Node2> for msg e34e2445-8f7a-43b1-a502-f17df5f9b131
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Verification of result_proof succesful for msg b6c6e6ad-c4e8-4d44-a8a5-8a7fcbe0a182
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Received shuttle from <Replica:fc402#Node0> for msg 1d195e6a-13f6-477e-ae89-cdb8229a368c
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Datastore before sending to client : {'jedi': ['luke skywalker'], 'movie': ['star']}
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Hashing the result and signing the statments for msg 1d195e6a-13f6-477e-ae89-cdb8229a368c
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Sending result to client <Client:43c03#Node1> for msg b6c6e6ad-c4e8-4d44-a8a5-8a7fcbe0a182
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Verifying order_proof
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Verification of order_proof succesful for msg 1d195e6a-13f6-477e-ae89-cdb8229a368c
+2017-11-21 21:57:02 INFO     [Client:43c03#Node1] Received result for msg b6c6e6ad-c4e8-4d44-a8a5-8a7fcbe0a182
+2017-11-21 21:57:02 INFO     [Client:43c03#Node1] Verifying result for msg b6c6e6ad-c4e8-4d44-a8a5-8a7fcbe0a182
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Verifying result_proof
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Received checkpoint shuttle from <Replica:43c02#Node1>
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Adding the hash of the datastore to the checkpoint proof
+2017-11-21 21:57:02 INFO     [Client:43c03#Node1] Valid t+1 found.
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Verifying checkpoint.
+2017-11-21 21:57:02 INFO     [Client:43c03#Node1] Verification of result for msg b6c6e6ad-c4e8-4d44-a8a5-8a7fcbe0a182 succesful.
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Checkpoint verification success.
+2017-11-21 21:57:02 INFO     [Client:43c03#Node1] Result verified for msg b6c6e6ad-c4e8-4d44-a8a5-8a7fcbe0a182 and the result is : 
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Truncating the history till slot : 3
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Saving the checkpoint information.
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Verification of result_proof succesful for msg 1d195e6a-13f6-477e-ae89-cdb8229a368c
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Forwarding the shuttle with signed stmts to <Replica:ce802#Node2> for msg 1d195e6a-13f6-477e-ae89-cdb8229a368c
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Received shuttle from <Replica:43c02#Node1> for msg e34e2445-8f7a-43b1-a502-f17df5f9b131
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Received checkpoint shuttle from <Replica:fc402#Node0>
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Hashing the result and signing the statments for msg e34e2445-8f7a-43b1-a502-f17df5f9b131
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Adding the hash of the datastore to the checkpoint proof
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Verifying order_proof
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Verifying result_proof_reverse_direction
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Verification of order_proof succesful for msg e34e2445-8f7a-43b1-a502-f17df5f9b131
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Verifying result_proof
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Verification of result_proof_reverse_direction succesful for msg b6c6e6ad-c4e8-4d44-a8a5-8a7fcbe0a182
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Result shuttle received for msg - b6c6e6ad-c4e8-4d44-a8a5-8a7fcbe0a182, caching the result.
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Verification of result_proof succesful for msg e34e2445-8f7a-43b1-a502-f17df5f9b131
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Datastore before sending to client : {'jedi': ['luke skywalker'], 'movie': ['star']}
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Sending result to client <Client:ce803#Node2> for msg e34e2445-8f7a-43b1-a502-f17df5f9b131
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Received checkpoint shuttle from <Replica:ce802#Node2>
+2017-11-21 21:57:02 INFO     [Replica:fc402#Node0] Verifying result_proof_reverse_direction
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Verifying checkpoint.
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Checkpoint verification success.
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Truncating the history till slot : 3
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Saving the checkpoint information.
+2017-11-21 21:57:02 INFO     [Replica:fc402#Node0] Verification of result_proof_reverse_direction succesful for msg b6c6e6ad-c4e8-4d44-a8a5-8a7fcbe0a182
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Received shuttle from <Replica:43c02#Node1> for msg 1d195e6a-13f6-477e-ae89-cdb8229a368c
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Hashing the result and signing the statments for msg 1d195e6a-13f6-477e-ae89-cdb8229a368c
+2017-11-21 21:57:02 INFO     [Replica:fc402#Node0] Result shuttle received for msg - b6c6e6ad-c4e8-4d44-a8a5-8a7fcbe0a182, caching the result.
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Verifying order_proof
+2017-11-21 21:57:02 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg b6c6e6ad-c4e8-4d44-a8a5-8a7fcbe0a182
+2017-11-21 21:57:02 INFO     [Client:ce803#Node2] Received result for msg e34e2445-8f7a-43b1-a502-f17df5f9b131
+2017-11-21 21:57:02 INFO     [Client:ce803#Node2] Verifying result for msg e34e2445-8f7a-43b1-a502-f17df5f9b131
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Verification of order_proof succesful for msg 1d195e6a-13f6-477e-ae89-cdb8229a368c
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Verifying result_proof
+2017-11-21 21:57:02 INFO     [Replica:fc402#Node0] Received checkpoint shuttle from <Replica:43c02#Node1>
+2017-11-21 21:57:02 INFO     [Client:ce803#Node2] Valid t+1 found.
+2017-11-21 21:57:02 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg checkpoint_request
+2017-11-21 21:57:02 INFO     [Client:ce803#Node2] Verification of result for msg e34e2445-8f7a-43b1-a502-f17df5f9b131 succesful.
+2017-11-21 21:57:02 INFO     [Client:ce803#Node2] Result verified for msg e34e2445-8f7a-43b1-a502-f17df5f9b131 and the result is : FAIL
+2017-11-21 21:57:02 INFO     [Replica:fc402#Node0]  Performing failure operation : sleep
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Verification of result_proof succesful for msg 1d195e6a-13f6-477e-ae89-cdb8229a368c
+2017-11-21 21:57:02 INFO     [Replica:fc402#Node0] Injection operation sleep. I am sleeping for sometime.
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Datastore before sending to client : {'jedi': ['luke skywalker'], 'movie': ['star']}
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Sending result to client <Client:fc403#Node0> for msg 1d195e6a-13f6-477e-ae89-cdb8229a368c
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Verifying result_proof_reverse_direction
+2017-11-21 21:57:02 INFO     [Client:fc403#Node0] Received result for msg 1d195e6a-13f6-477e-ae89-cdb8229a368c
+2017-11-21 21:57:02 INFO     [Client:fc403#Node0] Verifying result for msg 1d195e6a-13f6-477e-ae89-cdb8229a368c
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Verification of result_proof_reverse_direction succesful for msg e34e2445-8f7a-43b1-a502-f17df5f9b131
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Result shuttle received for msg - e34e2445-8f7a-43b1-a502-f17df5f9b131, caching the result.
+2017-11-21 21:57:02 INFO     [Client:fc403#Node0] Valid t+1 found.
+2017-11-21 21:57:02 INFO     [Client:fc403#Node0] Verification of result for msg 1d195e6a-13f6-477e-ae89-cdb8229a368c succesful.
+2017-11-21 21:57:02 INFO     [Client:fc403#Node0] Result verified for msg 1d195e6a-13f6-477e-ae89-cdb8229a368c and the result is : FAIL
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Received checkpoint shuttle from <Replica:43c02#Node1>
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Adding the hash of the datastore to the checkpoint proof
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Verifying result_proof_reverse_direction
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Verifying checkpoint.
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Checkpoint verification success.
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Truncating the history till slot : 5
+2017-11-21 21:57:02 INFO     [Replica:ce802#Node2] Saving the checkpoint information.
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Verification of result_proof_reverse_direction succesful for msg 1d195e6a-13f6-477e-ae89-cdb8229a368c
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Result shuttle received for msg - 1d195e6a-13f6-477e-ae89-cdb8229a368c, caching the result.
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Received checkpoint shuttle from <Replica:ce802#Node2>
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Verifying checkpoint.
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Checkpoint verification success.
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Truncating the history till slot : 5
+2017-11-21 21:57:02 INFO     [Replica:43c02#Node1] Saving the checkpoint information.
+2017-11-21 21:57:03 INFO     [Client:43c03#Node1] sending operation request to<Replica:fc402#Node0> with msgID : 95e0a494-81a5-4c06-b510-9abe4b9a032d operation : {put(movie2,pulp)}
+2017-11-21 21:57:03 INFO     [Client:ce803#Node2] sending operation request to<Replica:fc402#Node0> with msgID : c05daf7c-58c1-4b34-952e-2f32122be583 operation : {get(None,jedi)}
+2017-11-21 21:57:03 INFO     [Client:fc403#Node0] sending operation request to<Replica:fc402#Node0> with msgID : c4c91662-d36f-4a7c-8fca-934f3f40975b operation : {append(movie,wars)}
+2017-11-21 21:57:10 INFO     [Client:43c03#Node1] Contacting olympus to check if config is changed.
+2017-11-21 21:57:10 INFO     [Client:fc403#Node0] Contacting olympus to check if config is changed.
+2017-11-21 21:57:10 INFO     [Client:ce803#Node2] Contacting olympus to check if config is changed.
+2017-11-21 21:57:10 INFO     [OLYMPUS] Received config change check request from client <Client:43c03#Node1>
+2017-11-21 21:57:10 INFO     [Client:43c03#Node1] Configuration is not changed.
+2017-11-21 21:57:10 INFO     [OLYMPUS] Received config change check request from client <Client:fc403#Node0>
+2017-11-21 21:57:10 INFO     [OLYMPUS] Received config change check request from client <Client:ce803#Node2>
+2017-11-21 21:57:10 INFO     [Client:fc403#Node0] Configuration is not changed.
+2017-11-21 21:57:10 INFO     [Client:ce803#Node2] Configuration is not changed.
+2017-11-21 21:57:13 INFO     [Client:43c03#Node1] TIMEOUT
+2017-11-21 21:57:13 INFO     [Client:43c03#Node1] sending retransmission request to replica <Replica:ce802#Node2> for msgID : 95e0a494-81a5-4c06-b510-9abe4b9a032d
+2017-11-21 21:57:13 INFO     [Client:43c03#Node1] sending retransmission request to replica <Replica:fc402#Node0> for msgID : 95e0a494-81a5-4c06-b510-9abe4b9a032d
+2017-11-21 21:57:13 INFO     [Client:43c03#Node1] sending retransmission request to replica <Replica:43c02#Node1> for msgID : 95e0a494-81a5-4c06-b510-9abe4b9a032d
+2017-11-21 21:57:13 INFO     [Replica:ce802#Node2] Starting retransmission timer and sending request to head for msg 95e0a494-81a5-4c06-b510-9abe4b9a032d
+2017-11-21 21:57:13 INFO     [Replica:43c02#Node1] Starting retransmission timer and sending request to head for msg 95e0a494-81a5-4c06-b510-9abe4b9a032d
+2017-11-21 21:57:13 INFO     [Client:ce803#Node2] TIMEOUT
+2017-11-21 21:57:13 INFO     [Client:ce803#Node2] sending retransmission request to replica <Replica:ce802#Node2> for msgID : c05daf7c-58c1-4b34-952e-2f32122be583
+2017-11-21 21:57:13 INFO     [Client:ce803#Node2] sending retransmission request to replica <Replica:43c02#Node1> for msgID : c05daf7c-58c1-4b34-952e-2f32122be583
+2017-11-21 21:57:13 INFO     [Client:ce803#Node2] sending retransmission request to replica <Replica:fc402#Node0> for msgID : c05daf7c-58c1-4b34-952e-2f32122be583
+2017-11-21 21:57:13 INFO     [Replica:ce802#Node2] Starting retransmission timer and sending request to head for msg c05daf7c-58c1-4b34-952e-2f32122be583
+2017-11-21 21:57:13 INFO     [Replica:43c02#Node1] Starting retransmission timer and sending request to head for msg c05daf7c-58c1-4b34-952e-2f32122be583
+2017-11-21 21:57:13 INFO     [Client:fc403#Node0] TIMEOUT
+2017-11-21 21:57:13 INFO     [Client:fc403#Node0] sending retransmission request to replica <Replica:ce802#Node2> for msgID : c4c91662-d36f-4a7c-8fca-934f3f40975b
+2017-11-21 21:57:13 INFO     [Client:fc403#Node0] sending retransmission request to replica <Replica:fc402#Node0> for msgID : c4c91662-d36f-4a7c-8fca-934f3f40975b
+2017-11-21 21:57:13 INFO     [Client:fc403#Node0] sending retransmission request to replica <Replica:43c02#Node1> for msgID : c4c91662-d36f-4a7c-8fca-934f3f40975b
+2017-11-21 21:57:13 INFO     [Replica:ce802#Node2] Starting retransmission timer and sending request to head for msg c4c91662-d36f-4a7c-8fca-934f3f40975b
+2017-11-21 21:57:13 INFO     [Replica:43c02#Node1] Starting retransmission timer and sending request to head for msg c4c91662-d36f-4a7c-8fca-934f3f40975b
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Verifying checkpoint.
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Checkpoint verification success.
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Truncating the history till slot : 3
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Saving the checkpoint information.
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Verifying result_proof_reverse_direction
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Verification of result_proof_reverse_direction succesful for msg e34e2445-8f7a-43b1-a502-f17df5f9b131
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Result shuttle received for msg - e34e2445-8f7a-43b1-a502-f17df5f9b131, caching the result.
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg e34e2445-8f7a-43b1-a502-f17df5f9b131
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Verifying result_proof_reverse_direction
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Verification of result_proof_reverse_direction succesful for msg 1d195e6a-13f6-477e-ae89-cdb8229a368c
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Result shuttle received for msg - 1d195e6a-13f6-477e-ae89-cdb8229a368c, caching the result.
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg 1d195e6a-13f6-477e-ae89-cdb8229a368c
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Received checkpoint shuttle from <Replica:43c02#Node1>
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg checkpoint_request
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Verifying checkpoint.
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Checkpoint verification success.
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Truncating the history till slot : 5
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Saving the checkpoint information.
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Received operation {put(movie2,pulp)} with msg id 95e0a494-81a5-4c06-b510-9abe4b9a032d
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] slot number : 7
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg 95e0a494-81a5-4c06-b510-9abe4b9a032d
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Hashing the result and signing the statments for msg 95e0a494-81a5-4c06-b510-9abe4b9a032d
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Forwarding the shuttle with signed stmnts for msg 95e0a494-81a5-4c06-b510-9abe4b9a032d to <Replica:43c02#Node1>
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Received operation {get(jedi)} with msg id c05daf7c-58c1-4b34-952e-2f32122be583
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] slot number : 8
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Received shuttle from <Replica:fc402#Node0> for msg 95e0a494-81a5-4c06-b510-9abe4b9a032d
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Hashing the result and signing the statments for msg 95e0a494-81a5-4c06-b510-9abe4b9a032d
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg c05daf7c-58c1-4b34-952e-2f32122be583
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Hashing the result and signing the statments for msg c05daf7c-58c1-4b34-952e-2f32122be583
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Forwarding the shuttle with signed stmnts for msg c05daf7c-58c1-4b34-952e-2f32122be583 to <Replica:43c02#Node1>
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Verifying order_proof
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Checkpoint criteria satisfied.
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Starting checkpoint shuttle.
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Adding the hash of the datastore to the checkpoint proof
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Verification of order_proof succesful for msg 95e0a494-81a5-4c06-b510-9abe4b9a032d
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Verifying result_proof
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Received operation {append(movie,wars)} with msg id c4c91662-d36f-4a7c-8fca-934f3f40975b
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] slot number : 9
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg c4c91662-d36f-4a7c-8fca-934f3f40975b
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Hashing the result and signing the statments for msg c4c91662-d36f-4a7c-8fca-934f3f40975b
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Verification of result_proof succesful for msg 95e0a494-81a5-4c06-b510-9abe4b9a032d
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Forwarding the shuttle with signed stmnts for msg c4c91662-d36f-4a7c-8fca-934f3f40975b to <Replica:43c02#Node1>
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Forwarding the shuttle with signed stmts to <Replica:ce802#Node2> for msg 95e0a494-81a5-4c06-b510-9abe4b9a032d
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Head has already seen the msg 95e0a494-81a5-4c06-b510-9abe4b9a032d, so we don't start a new shuttle. Let's start timer andW wait for result shuttle to come back
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Received shuttle from <Replica:43c02#Node1> for msg 95e0a494-81a5-4c06-b510-9abe4b9a032d
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Received shuttle from <Replica:fc402#Node0> for msg c05daf7c-58c1-4b34-952e-2f32122be583
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Hashing the result and signing the statments for msg 95e0a494-81a5-4c06-b510-9abe4b9a032d
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Hashing the result and signing the statments for msg c05daf7c-58c1-4b34-952e-2f32122be583
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Verifying order_proof
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Verifying order_proof
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Verification of order_proof succesful for msg 95e0a494-81a5-4c06-b510-9abe4b9a032d
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Verifying result_proof
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Verification of order_proof succesful for msg c05daf7c-58c1-4b34-952e-2f32122be583
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Verifying result_proof
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Head has already seen the msg c05daf7c-58c1-4b34-952e-2f32122be583, so we don't start a new shuttle. Let's start timer andW wait for result shuttle to come back
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Verification of result_proof succesful for msg 95e0a494-81a5-4c06-b510-9abe4b9a032d
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Result received for retransmission of msg 95e0a494-81a5-4c06-b510-9abe4b9a032d, sending this to client before caching it
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Datastore before sending to client : {'movie2': ['pulp'], 'jedi': ['luke skywalker'], 'movie': ['star']}
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Sending result to client <Client:43c03#Node1> for msg 95e0a494-81a5-4c06-b510-9abe4b9a032d
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Verification of result_proof succesful for msg c05daf7c-58c1-4b34-952e-2f32122be583
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Forwarding the shuttle with signed stmts to <Replica:ce802#Node2> for msg c05daf7c-58c1-4b34-952e-2f32122be583
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Head has already seen the msg c4c91662-d36f-4a7c-8fca-934f3f40975b, so we don't start a new shuttle. Let's start timer andW wait for result shuttle to come back
+2017-11-21 21:57:14 INFO     [Client:43c03#Node1] Received a succesfull retransmission result from <Replica:ce802#Node2> for msg : 95e0a494-81a5-4c06-b510-9abe4b9a032d
+2017-11-21 21:57:14 INFO     [Client:43c03#Node1] Verifying result for msg 95e0a494-81a5-4c06-b510-9abe4b9a032d
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Received checkpoint shuttle from <Replica:fc402#Node0>
+2017-11-21 21:57:14 INFO     [Client:43c03#Node1] Valid t+1 found.
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Adding the hash of the datastore to the checkpoint proof
+2017-11-21 21:57:14 INFO     [Client:43c03#Node1] Verification of result for msg 95e0a494-81a5-4c06-b510-9abe4b9a032d succesful.
+2017-11-21 21:57:14 INFO     [Client:43c03#Node1] Retransmission result : OK
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Received shuttle from <Replica:fc402#Node0> for msg c4c91662-d36f-4a7c-8fca-934f3f40975b
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Received shuttle from <Replica:43c02#Node1> for msg c05daf7c-58c1-4b34-952e-2f32122be583
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Hashing the result and signing the statments for msg c05daf7c-58c1-4b34-952e-2f32122be583
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Hashing the result and signing the statments for msg c4c91662-d36f-4a7c-8fca-934f3f40975b
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Verifying order_proof
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Verifying order_proof
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Verification of order_proof succesful for msg c4c91662-d36f-4a7c-8fca-934f3f40975b
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Verification of order_proof succesful for msg c05daf7c-58c1-4b34-952e-2f32122be583
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Verifying result_proof
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Verifying result_proof
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Verification of result_proof succesful for msg c4c91662-d36f-4a7c-8fca-934f3f40975b
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Forwarding the shuttle with signed stmts to <Replica:ce802#Node2> for msg c4c91662-d36f-4a7c-8fca-934f3f40975b
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Verification of result_proof succesful for msg c05daf7c-58c1-4b34-952e-2f32122be583
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Result received for retransmission of msg c05daf7c-58c1-4b34-952e-2f32122be583, sending this to client before caching it
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Datastore before sending to client : {'movie2': ['pulp'], 'jedi': ['luke skywalker'], 'movie': ['star']}
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Sending result to client <Client:ce803#Node2> for msg c05daf7c-58c1-4b34-952e-2f32122be583
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Verifying result_proof_reverse_direction
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Verification of result_proof_reverse_direction succesful for msg 95e0a494-81a5-4c06-b510-9abe4b9a032d
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Result shuttle received for msg - 95e0a494-81a5-4c06-b510-9abe4b9a032d, caching the result.
+2017-11-21 21:57:14 INFO     [Client:ce803#Node2] Received a succesfull retransmission result from <Replica:ce802#Node2> for msg : c05daf7c-58c1-4b34-952e-2f32122be583
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Result received for retransmission for msg 95e0a494-81a5-4c06-b510-9abe4b9a032d, sending this to client before caching it
+2017-11-21 21:57:14 INFO     [Client:ce803#Node2] Verifying result for msg c05daf7c-58c1-4b34-952e-2f32122be583
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Received checkpoint shuttle from <Replica:43c02#Node1>
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Adding the hash of the datastore to the checkpoint proof
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Verifying checkpoint.
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Checkpoint verification success.
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Truncating the history till slot : 7
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Saving the checkpoint information.
+2017-11-21 21:57:14 INFO     [Client:ce803#Node2] Valid t+1 found.
+2017-11-21 21:57:14 INFO     [Client:ce803#Node2] Verification of result for msg c05daf7c-58c1-4b34-952e-2f32122be583 succesful.
+2017-11-21 21:57:14 INFO     [Client:ce803#Node2] Retransmission result : ['luke skywalker']
+2017-11-21 21:57:14 INFO     [Client:ce803#Node2] sending data store query request to head
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Verifying result_proof_reverse_direction
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Received shuttle from <Replica:43c02#Node1> for msg c4c91662-d36f-4a7c-8fca-934f3f40975b
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Hashing the result and signing the statments for msg c4c91662-d36f-4a7c-8fca-934f3f40975b
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Verifying result_proof_reverse_direction
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Verifying order_proof
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Verification of result_proof_reverse_direction succesful for msg c05daf7c-58c1-4b34-952e-2f32122be583
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Result shuttle received for msg - c05daf7c-58c1-4b34-952e-2f32122be583, caching the result.
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Result received for retransmission for msg c05daf7c-58c1-4b34-952e-2f32122be583, sending this to client before caching it
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Verification of result_proof_reverse_direction succesful for msg 95e0a494-81a5-4c06-b510-9abe4b9a032d
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Result shuttle received for msg - 95e0a494-81a5-4c06-b510-9abe4b9a032d, caching the result.
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg 95e0a494-81a5-4c06-b510-9abe4b9a032d
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Verification of order_proof succesful for msg c4c91662-d36f-4a7c-8fca-934f3f40975b
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Result received for retransmission for msg 95e0a494-81a5-4c06-b510-9abe4b9a032d, sending this to client before caching it
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Verifying result_proof
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Received checkpoint shuttle from <Replica:ce802#Node2>
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Verifying checkpoint.
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Checkpoint verification success.
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Truncating the history till slot : 7
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Saving the checkpoint information.
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Verification of result_proof succesful for msg c4c91662-d36f-4a7c-8fca-934f3f40975b
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Result received for retransmission of msg c4c91662-d36f-4a7c-8fca-934f3f40975b, sending this to client before caching it
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Datastore before sending to client : {'movie2': ['pulp'], 'jedi': ['luke skywalker'], 'movie': ['star', 'wars']}
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Received data_store query from client <Client:ce803#Node2>
+2017-11-21 21:57:14 INFO     [Replica:ce802#Node2] Sending result to client <Client:fc403#Node0> for msg c4c91662-d36f-4a7c-8fca-934f3f40975b
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Sent data_store to requesting client <Client:ce803#Node2>
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Verifying result_proof_reverse_direction
+2017-11-21 21:57:14 INFO     [Client:fc403#Node0] Received a succesfull retransmission result from <Replica:ce802#Node2> for msg : c4c91662-d36f-4a7c-8fca-934f3f40975b
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Verifying result_proof_reverse_direction
+2017-11-21 21:57:14 INFO     [Client:fc403#Node0] Verifying result for msg c4c91662-d36f-4a7c-8fca-934f3f40975b
+2017-11-21 21:57:14 INFO     [Client:fc403#Node0] Valid t+1 found.
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Verification of result_proof_reverse_direction succesful for msg c05daf7c-58c1-4b34-952e-2f32122be583
+2017-11-21 21:57:14 INFO     [Client:fc403#Node0] Verification of result for msg c4c91662-d36f-4a7c-8fca-934f3f40975b succesful.
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Result shuttle received for msg - c05daf7c-58c1-4b34-952e-2f32122be583, caching the result.
+2017-11-21 21:57:14 INFO     [Client:fc403#Node0] Retransmission result : OK
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg c05daf7c-58c1-4b34-952e-2f32122be583
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Verification of result_proof_reverse_direction succesful for msg c4c91662-d36f-4a7c-8fca-934f3f40975b
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Result received for retransmission for msg c05daf7c-58c1-4b34-952e-2f32122be583, sending this to client before caching it
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Result shuttle received for msg - c4c91662-d36f-4a7c-8fca-934f3f40975b, caching the result.
+2017-11-21 21:57:14 INFO     [Replica:43c02#Node1] Result received for retransmission for msg c4c91662-d36f-4a7c-8fca-934f3f40975b, sending this to client before caching it
+2017-11-21 21:57:14 INFO     [Client:ce803#Node2] head_data_store receieved from head
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Received checkpoint shuttle from <Replica:43c02#Node1>
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg checkpoint_request
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Verifying checkpoint.
+2017-11-21 21:57:14 INFO     [Client:ce803#Node2] verifying data store query request result from head to local data store
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Checkpoint verification success.
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Truncating the history till slot : 7
+2017-11-21 21:57:14 INFO     [Client:ce803#Node2] Verification  of datastore succeeded.
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Saving the checkpoint information.
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Verifying result_proof_reverse_direction
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Verification of result_proof_reverse_direction succesful for msg c4c91662-d36f-4a7c-8fca-934f3f40975b
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Result shuttle received for msg - c4c91662-d36f-4a7c-8fca-934f3f40975b, caching the result.
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg c4c91662-d36f-4a7c-8fca-934f3f40975b
+2017-11-21 21:57:14 INFO     [Replica:fc402#Node0] Result received for retransmission for msg c4c91662-d36f-4a7c-8fca-934f3f40975b, sending this to client before caching it
+2017-11-21 21:57:15 INFO     [Client:43c03#Node1] sending operation request to<Replica:fc402#Node0> with msgID : e4c0330f-d730-40da-b53b-d5e5897d5340 operation : {put(movie2,pulp)}
+2017-11-21 21:57:15 INFO     [Replica:fc402#Node0] Received operation {put(movie2,pulp)} with msg id e4c0330f-d730-40da-b53b-d5e5897d5340
+2017-11-21 21:57:15 INFO     [Replica:fc402#Node0] slot number : 10
+2017-11-21 21:57:15 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg e4c0330f-d730-40da-b53b-d5e5897d5340
+2017-11-21 21:57:15 INFO     [Replica:fc402#Node0] Hashing the result and signing the statments for msg e4c0330f-d730-40da-b53b-d5e5897d5340
+2017-11-21 21:57:15 INFO     [Replica:fc402#Node0] Forwarding the shuttle with signed stmnts for msg e4c0330f-d730-40da-b53b-d5e5897d5340 to <Replica:43c02#Node1>
+2017-11-21 21:57:15 INFO     [Replica:fc402#Node0] Checkpoint criteria satisfied.
+2017-11-21 21:57:15 INFO     [Replica:fc402#Node0] Starting checkpoint shuttle.
+2017-11-21 21:57:15 INFO     [Replica:fc402#Node0] Adding the hash of the datastore to the checkpoint proof
+2017-11-21 21:57:15 INFO     [Replica:43c02#Node1] Received shuttle from <Replica:fc402#Node0> for msg e4c0330f-d730-40da-b53b-d5e5897d5340
+2017-11-21 21:57:15 INFO     [Replica:43c02#Node1] Hashing the result and signing the statments for msg e4c0330f-d730-40da-b53b-d5e5897d5340
+2017-11-21 21:57:15 INFO     [Replica:43c02#Node1] Verifying order_proof
+2017-11-21 21:57:15 INFO     [Replica:43c02#Node1] Verification of order_proof succesful for msg e4c0330f-d730-40da-b53b-d5e5897d5340
+2017-11-21 21:57:15 INFO     [Replica:43c02#Node1] Verifying result_proof
+2017-11-21 21:57:15 INFO     [Replica:43c02#Node1] Verification of result_proof succesful for msg e4c0330f-d730-40da-b53b-d5e5897d5340
+2017-11-21 21:57:15 INFO     [Replica:43c02#Node1] Forwarding the shuttle with signed stmts to <Replica:ce802#Node2> for msg e4c0330f-d730-40da-b53b-d5e5897d5340
+2017-11-21 21:57:15 INFO     [Replica:43c02#Node1] Received checkpoint shuttle from <Replica:fc402#Node0>
+2017-11-21 21:57:15 INFO     [Replica:43c02#Node1] Adding the hash of the datastore to the checkpoint proof
+2017-11-21 21:57:15 INFO     [Replica:ce802#Node2] Received shuttle from <Replica:43c02#Node1> for msg e4c0330f-d730-40da-b53b-d5e5897d5340
+2017-11-21 21:57:15 INFO     [Replica:ce802#Node2] Hashing the result and signing the statments for msg e4c0330f-d730-40da-b53b-d5e5897d5340
+2017-11-21 21:57:15 INFO     [Replica:ce802#Node2] Verifying order_proof
+2017-11-21 21:57:15 INFO     [Replica:ce802#Node2] Verification of order_proof succesful for msg e4c0330f-d730-40da-b53b-d5e5897d5340
+2017-11-21 21:57:15 INFO     [Replica:ce802#Node2] Verifying result_proof
+2017-11-21 21:57:15 INFO     [Replica:ce802#Node2] Verification of result_proof succesful for msg e4c0330f-d730-40da-b53b-d5e5897d5340
+2017-11-21 21:57:15 INFO     [Replica:ce802#Node2] Datastore before sending to client : {'movie2': ['pulp'], 'jedi': ['luke skywalker'], 'movie': ['star', 'wars']}
+2017-11-21 21:57:15 INFO     [Client:fc403#Node0] sending operation request to<Replica:fc402#Node0> with msgID : c3196b69-5127-4d40-860a-8bf1140dde08 operation : {get(None,movie)}
+2017-11-21 21:57:15 INFO     [Replica:ce802#Node2] Sending result to client <Client:43c03#Node1> for msg e4c0330f-d730-40da-b53b-d5e5897d5340
+2017-11-21 21:57:15 INFO     [Replica:fc402#Node0] Received operation {get(movie)} with msg id c3196b69-5127-4d40-860a-8bf1140dde08
+2017-11-21 21:57:15 INFO     [Client:43c03#Node1] Received result for msg e4c0330f-d730-40da-b53b-d5e5897d5340
+2017-11-21 21:57:15 INFO     [Client:43c03#Node1] Verifying result for msg e4c0330f-d730-40da-b53b-d5e5897d5340
+2017-11-21 21:57:15 INFO     [Replica:fc402#Node0] slot number : 11
+2017-11-21 21:57:15 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg c3196b69-5127-4d40-860a-8bf1140dde08
+2017-11-21 21:57:15 INFO     [Client:43c03#Node1] Valid t+1 found.
+2017-11-21 21:57:15 INFO     [Client:43c03#Node1] Verification of result for msg e4c0330f-d730-40da-b53b-d5e5897d5340 succesful.
+2017-11-21 21:57:15 INFO     [Replica:ce802#Node2] Received checkpoint shuttle from <Replica:43c02#Node1>
+2017-11-21 21:57:15 INFO     [Replica:fc402#Node0] Hashing the result and signing the statments for msg c3196b69-5127-4d40-860a-8bf1140dde08
+2017-11-21 21:57:15 INFO     [Client:43c03#Node1] Result verified for msg e4c0330f-d730-40da-b53b-d5e5897d5340 and the result is : OK
+2017-11-21 21:57:15 INFO     [Replica:ce802#Node2] Adding the hash of the datastore to the checkpoint proof
+2017-11-21 21:57:15 INFO     [Replica:fc402#Node0] Forwarding the shuttle with signed stmnts for msg c3196b69-5127-4d40-860a-8bf1140dde08 to <Replica:43c02#Node1>
+2017-11-21 21:57:15 INFO     [Replica:ce802#Node2] Verifying checkpoint.
+2017-11-21 21:57:15 INFO     [Replica:43c02#Node1] Verifying result_proof_reverse_direction
+2017-11-21 21:57:15 INFO     [Replica:ce802#Node2] Checkpoint verification success.
+2017-11-21 21:57:15 INFO     [Replica:ce802#Node2] Truncating the history till slot : 9
+2017-11-21 21:57:15 INFO     [Replica:ce802#Node2] Saving the checkpoint information.
+2017-11-21 21:57:15 INFO     [Replica:43c02#Node1] Verification of result_proof_reverse_direction succesful for msg e4c0330f-d730-40da-b53b-d5e5897d5340
+2017-11-21 21:57:15 INFO     [Replica:43c02#Node1] Result shuttle received for msg - e4c0330f-d730-40da-b53b-d5e5897d5340, caching the result.
+2017-11-21 21:57:15 INFO     [Replica:43c02#Node1] Received shuttle from <Replica:fc402#Node0> for msg c3196b69-5127-4d40-860a-8bf1140dde08
+2017-11-21 21:57:15 INFO     [Replica:43c02#Node1] Hashing the result and signing the statments for msg c3196b69-5127-4d40-860a-8bf1140dde08
+2017-11-21 21:57:15 INFO     [Replica:fc402#Node0] Verifying result_proof_reverse_direction
+2017-11-21 21:57:15 INFO     [Replica:43c02#Node1] Verifying order_proof
+2017-11-21 21:57:15 INFO     [Replica:fc402#Node0] Verification of result_proof_reverse_direction succesful for msg e4c0330f-d730-40da-b53b-d5e5897d5340
+2017-11-21 21:57:15 INFO     [Replica:43c02#Node1] Verification of order_proof succesful for msg c3196b69-5127-4d40-860a-8bf1140dde08
+2017-11-21 21:57:15 INFO     [Replica:fc402#Node0] Result shuttle received for msg - e4c0330f-d730-40da-b53b-d5e5897d5340, caching the result.
+2017-11-21 21:57:15 INFO     [Replica:43c02#Node1] Verifying result_proof
+2017-11-21 21:57:15 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg e4c0330f-d730-40da-b53b-d5e5897d5340
+2017-11-21 21:57:15 INFO     [Replica:43c02#Node1] Verification of result_proof succesful for msg c3196b69-5127-4d40-860a-8bf1140dde08
+2017-11-21 21:57:15 INFO     [Replica:43c02#Node1] Forwarding the shuttle with signed stmts to <Replica:ce802#Node2> for msg c3196b69-5127-4d40-860a-8bf1140dde08
+2017-11-21 21:57:15 INFO     [Replica:43c02#Node1] Received checkpoint shuttle from <Replica:ce802#Node2>
+2017-11-21 21:57:15 INFO     [Replica:43c02#Node1] Verifying checkpoint.
+2017-11-21 21:57:15 INFO     [Replica:43c02#Node1] Checkpoint verification success.
+2017-11-21 21:57:15 INFO     [Replica:43c02#Node1] Truncating the history till slot : 9
+2017-11-21 21:57:15 INFO     [Replica:43c02#Node1] Saving the checkpoint information.
+2017-11-21 21:57:15 INFO     [Replica:ce802#Node2] Received shuttle from <Replica:43c02#Node1> for msg c3196b69-5127-4d40-860a-8bf1140dde08
+2017-11-21 21:57:15 INFO     [Replica:ce802#Node2] Hashing the result and signing the statments for msg c3196b69-5127-4d40-860a-8bf1140dde08
+2017-11-21 21:57:15 INFO     [Replica:ce802#Node2] Verifying order_proof
+2017-11-21 21:57:15 INFO     [Replica:fc402#Node0] Received checkpoint shuttle from <Replica:43c02#Node1>
+2017-11-21 21:57:15 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg checkpoint_request
+2017-11-21 21:57:15 INFO     [Replica:fc402#Node0] Verifying checkpoint.
+2017-11-21 21:57:15 INFO     [Replica:fc402#Node0] Checkpoint verification success.
+2017-11-21 21:57:15 INFO     [Replica:fc402#Node0] Truncating the history till slot : 9
+2017-11-21 21:57:15 INFO     [Replica:ce802#Node2] Verification of order_proof succesful for msg c3196b69-5127-4d40-860a-8bf1140dde08
+2017-11-21 21:57:15 INFO     [Replica:fc402#Node0] Saving the checkpoint information.
+2017-11-21 21:57:15 INFO     [Replica:ce802#Node2] Verifying result_proof
+2017-11-21 21:57:15 INFO     [Replica:ce802#Node2] Verification of result_proof succesful for msg c3196b69-5127-4d40-860a-8bf1140dde08
+2017-11-21 21:57:15 INFO     [Replica:ce802#Node2] Datastore before sending to client : {'movie2': ['pulp'], 'jedi': ['luke skywalker'], 'movie': ['star', 'wars']}
+2017-11-21 21:57:15 INFO     [Replica:ce802#Node2] Sending result to client <Client:fc403#Node0> for msg c3196b69-5127-4d40-860a-8bf1140dde08
+2017-11-21 21:57:15 INFO     [Client:fc403#Node0] Received result for msg c3196b69-5127-4d40-860a-8bf1140dde08
+2017-11-21 21:57:15 INFO     [Client:fc403#Node0] Verifying result for msg c3196b69-5127-4d40-860a-8bf1140dde08
+2017-11-21 21:57:15 INFO     [Client:fc403#Node0] Valid t+1 found.
+2017-11-21 21:57:15 INFO     [Client:fc403#Node0] Verification of result for msg c3196b69-5127-4d40-860a-8bf1140dde08 succesful.
+2017-11-21 21:57:15 INFO     [Client:fc403#Node0] Result verified for msg c3196b69-5127-4d40-860a-8bf1140dde08 and the result is : ['star', 'wars']
+2017-11-21 21:57:15 INFO     [Client:fc403#Node0] sending data store query request to head
+2017-11-21 21:57:15 INFO     [Replica:fc402#Node0] Received data_store query from client <Client:fc403#Node0>
+2017-11-21 21:57:15 INFO     [Replica:fc402#Node0] Sent data_store to requesting client <Client:fc403#Node0>
+2017-11-21 21:57:15 INFO     [Client:fc403#Node0] head_data_store receieved from head
+2017-11-21 21:57:15 INFO     [Client:fc403#Node0] verifying data store query request result from head to local data store
+2017-11-21 21:57:15 INFO     [Client:fc403#Node0] Verification  of datastore succeeded.
+2017-11-21 21:57:15 INFO     [Replica:43c02#Node1] Verifying result_proof_reverse_direction
+2017-11-21 21:57:15 INFO     [Replica:43c02#Node1] Verification of result_proof_reverse_direction succesful for msg c3196b69-5127-4d40-860a-8bf1140dde08
+2017-11-21 21:57:15 INFO     [Replica:43c02#Node1] Result shuttle received for msg - c3196b69-5127-4d40-860a-8bf1140dde08, caching the result.
+2017-11-21 21:57:15 INFO     [Replica:fc402#Node0] Verifying result_proof_reverse_direction
+2017-11-21 21:57:15 INFO     [Replica:fc402#Node0] Verification of result_proof_reverse_direction succesful for msg c3196b69-5127-4d40-860a-8bf1140dde08
+2017-11-21 21:57:15 INFO     [Replica:fc402#Node0] Result shuttle received for msg - c3196b69-5127-4d40-860a-8bf1140dde08, caching the result.
+2017-11-21 21:57:15 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg c3196b69-5127-4d40-860a-8bf1140dde08
+2017-11-21 21:57:16 INFO     [Client:43c03#Node1] sending operation request to<Replica:fc402#Node0> with msgID : 44dd15c5-1616-48f6-ac70-5214e8b4b907 operation : {append(movie4,bill)}
+2017-11-21 21:57:16 INFO     [Replica:fc402#Node0] Received operation {append(movie4,bill)} with msg id 44dd15c5-1616-48f6-ac70-5214e8b4b907
+2017-11-21 21:57:16 INFO     [Replica:fc402#Node0] slot number : 12
+2017-11-21 21:57:16 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg 44dd15c5-1616-48f6-ac70-5214e8b4b907
+2017-11-21 21:57:16 INFO     [Replica:fc402#Node0] Hashing the result and signing the statments for msg 44dd15c5-1616-48f6-ac70-5214e8b4b907
+2017-11-21 21:57:16 INFO     [Replica:fc402#Node0] Forwarding the shuttle with signed stmnts for msg 44dd15c5-1616-48f6-ac70-5214e8b4b907 to <Replica:43c02#Node1>
+2017-11-21 21:57:16 INFO     [Replica:fc402#Node0] Checkpoint criteria satisfied.
+2017-11-21 21:57:16 INFO     [Replica:fc402#Node0] Starting checkpoint shuttle.
+2017-11-21 21:57:16 INFO     [Replica:fc402#Node0] Adding the hash of the datastore to the checkpoint proof
+2017-11-21 21:57:16 INFO     [Replica:43c02#Node1] Received shuttle from <Replica:fc402#Node0> for msg 44dd15c5-1616-48f6-ac70-5214e8b4b907
+2017-11-21 21:57:16 INFO     [Replica:43c02#Node1] Hashing the result and signing the statments for msg 44dd15c5-1616-48f6-ac70-5214e8b4b907
+2017-11-21 21:57:16 INFO     [Replica:43c02#Node1] Verifying order_proof
+2017-11-21 21:57:16 INFO     [Replica:43c02#Node1] Verification of order_proof succesful for msg 44dd15c5-1616-48f6-ac70-5214e8b4b907
+2017-11-21 21:57:16 INFO     [Replica:43c02#Node1] Verifying result_proof
+2017-11-21 21:57:16 INFO     [Replica:43c02#Node1] Verification of result_proof succesful for msg 44dd15c5-1616-48f6-ac70-5214e8b4b907
+2017-11-21 21:57:16 INFO     [Replica:43c02#Node1] Forwarding the shuttle with signed stmts to <Replica:ce802#Node2> for msg 44dd15c5-1616-48f6-ac70-5214e8b4b907
+2017-11-21 21:57:16 INFO     [Replica:43c02#Node1] Received checkpoint shuttle from <Replica:fc402#Node0>
+2017-11-21 21:57:16 INFO     [Replica:43c02#Node1] Adding the hash of the datastore to the checkpoint proof
+2017-11-21 21:57:16 INFO     [Replica:ce802#Node2] Received shuttle from <Replica:43c02#Node1> for msg 44dd15c5-1616-48f6-ac70-5214e8b4b907
+2017-11-21 21:57:16 INFO     [Replica:ce802#Node2] Hashing the result and signing the statments for msg 44dd15c5-1616-48f6-ac70-5214e8b4b907
+2017-11-21 21:57:16 INFO     [Replica:ce802#Node2] Verifying order_proof
+2017-11-21 21:57:16 INFO     [Replica:ce802#Node2] Verification of order_proof succesful for msg 44dd15c5-1616-48f6-ac70-5214e8b4b907
+2017-11-21 21:57:16 INFO     [Replica:ce802#Node2] Verifying result_proof
+2017-11-21 21:57:16 INFO     [Replica:ce802#Node2] Verification of result_proof succesful for msg 44dd15c5-1616-48f6-ac70-5214e8b4b907
+2017-11-21 21:57:16 INFO     [Replica:ce802#Node2] Datastore before sending to client : {'movie2': ['pulp'], 'jedi': ['luke skywalker'], 'movie': ['star', 'wars']}
+2017-11-21 21:57:16 INFO     [Replica:ce802#Node2] Sending result to client <Client:43c03#Node1> for msg 44dd15c5-1616-48f6-ac70-5214e8b4b907
+2017-11-21 21:57:16 INFO     [Client:43c03#Node1] Received result for msg 44dd15c5-1616-48f6-ac70-5214e8b4b907
+2017-11-21 21:57:16 INFO     [Client:43c03#Node1] Verifying result for msg 44dd15c5-1616-48f6-ac70-5214e8b4b907
+2017-11-21 21:57:16 INFO     [Replica:43c02#Node1] Verifying result_proof_reverse_direction
+2017-11-21 21:57:16 INFO     [Replica:ce802#Node2] Received checkpoint shuttle from <Replica:43c02#Node1>
+2017-11-21 21:57:16 INFO     [Replica:ce802#Node2] Adding the hash of the datastore to the checkpoint proof
+2017-11-21 21:57:16 INFO     [Replica:ce802#Node2] Verifying checkpoint.
+2017-11-21 21:57:16 INFO     [Replica:43c02#Node1] Verification of result_proof_reverse_direction succesful for msg 44dd15c5-1616-48f6-ac70-5214e8b4b907
+2017-11-21 21:57:16 INFO     [Replica:ce802#Node2] Checkpoint verification success.
+2017-11-21 21:57:16 INFO     [Replica:43c02#Node1] Result shuttle received for msg - 44dd15c5-1616-48f6-ac70-5214e8b4b907, caching the result.
+2017-11-21 21:57:16 INFO     [Replica:ce802#Node2] Truncating the history till slot : 11
+2017-11-21 21:57:16 INFO     [Replica:ce802#Node2] Saving the checkpoint information.
+2017-11-21 21:57:16 INFO     [Replica:43c02#Node1] Received checkpoint shuttle from <Replica:ce802#Node2>
+2017-11-21 21:57:16 INFO     [Replica:43c02#Node1] Verifying checkpoint.
+2017-11-21 21:57:16 INFO     [Replica:fc402#Node0] Verifying result_proof_reverse_direction
+2017-11-21 21:57:16 INFO     [Replica:43c02#Node1] Checkpoint verification success.
+2017-11-21 21:57:16 INFO     [Client:43c03#Node1] Valid t+1 found.
+2017-11-21 21:57:16 INFO     [Replica:43c02#Node1] Truncating the history till slot : 11
+2017-11-21 21:57:16 INFO     [Replica:43c02#Node1] Saving the checkpoint information.
+2017-11-21 21:57:16 INFO     [Client:43c03#Node1] Verification of result for msg 44dd15c5-1616-48f6-ac70-5214e8b4b907 succesful.
+2017-11-21 21:57:16 INFO     [Client:43c03#Node1] Result verified for msg 44dd15c5-1616-48f6-ac70-5214e8b4b907 and the result is : FAIL
+2017-11-21 21:57:16 INFO     [Client:43c03#Node1] sending data store query request to head
+2017-11-21 21:57:16 INFO     [Replica:fc402#Node0] Verification of result_proof_reverse_direction succesful for msg 44dd15c5-1616-48f6-ac70-5214e8b4b907
+2017-11-21 21:57:16 INFO     [Replica:fc402#Node0] Result shuttle received for msg - 44dd15c5-1616-48f6-ac70-5214e8b4b907, caching the result.
+2017-11-21 21:57:16 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg 44dd15c5-1616-48f6-ac70-5214e8b4b907
+2017-11-21 21:57:16 INFO     [Replica:fc402#Node0] Received checkpoint shuttle from <Replica:43c02#Node1>
+2017-11-21 21:57:16 INFO     [Replica:fc402#Node0] checking if failure injection criteria is satisfied for msg checkpoint_request
+2017-11-21 21:57:16 INFO     [Replica:fc402#Node0] Verifying checkpoint.
+2017-11-21 21:57:16 INFO     [Replica:fc402#Node0] Checkpoint verification success.
+2017-11-21 21:57:16 INFO     [Replica:fc402#Node0] Truncating the history till slot : 11
+2017-11-21 21:57:16 INFO     [Replica:fc402#Node0] Saving the checkpoint information.
+2017-11-21 21:57:16 INFO     [Replica:fc402#Node0] Received data_store query from client <Client:43c03#Node1>
+2017-11-21 21:57:16 INFO     [Replica:fc402#Node0] Sent data_store to requesting client <Client:43c03#Node1>
+2017-11-21 21:57:16 INFO     [Client:43c03#Node1] head_data_store receieved from head
+2017-11-21 21:57:16 INFO     [Client:43c03#Node1] verifying data store query request result from head to local data store
+2017-11-21 21:57:16 INFO     [Client:43c03#Node1] Verification  of datastore succeeded.

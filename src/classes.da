@@ -8,10 +8,11 @@ class data:
 # intial configurations that every replica will receive
 
 class ReplicaConfig:
-	def __init__(self, id, replica_keys, signing_key, data_store, mode, replica_list, testcase_name):
+	def __init__(self, id, replica_keys, signing_key, data_store, mode, replica_list, testcase_name, checkpoint_num):
 		self.id = id
 		self.head_id = None
 		self.signing_key = signing_key
+		self.new_config_count = None
 		self.replica_keys = replica_keys
 		self.replica_list = replica_list
 		self.prev_replica_id = None
@@ -23,6 +24,7 @@ class ReplicaConfig:
 		self.is_tail = False
 		self.data_store = data_store
 		self.mode = mode
+		self.checkpoint_num = checkpoint_num
 		self.testcase_name = testcase_name
 
 # Configuration object that everyclient will receive
@@ -86,11 +88,12 @@ class ResultStatement:
 		self.result = result
 
 class FailureConfig:
-	def __init__(self, client, msg_count, shuttle_type, opt):
+	def __init__(self, client, msg_count, shuttle_type, opt, arg):
 		self.client_id = client
 		self.msg_count = msg_count
 		self.shuttle_type = shuttle_type
 		self.opt_type = opt
+		self.opt_arg = arg
 
 class CheckpointShuttle:
 	def __init__(self, slot):

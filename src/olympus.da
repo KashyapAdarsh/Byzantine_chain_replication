@@ -20,7 +20,6 @@ class Olympus(process):
 		self.clients = dict()
 		self.client_list = []
 		self.signing_keys = dict()
-		self.failure_config = None
 		self.verify_keys = dict()
 		self.olympus_id = uuid.uuid4()
 		self.configs = []
@@ -43,11 +42,15 @@ class Olympus(process):
 		self.all_replicas_spawned = False
 		self.privateKey = None
 		self.HASHER = nacl.hash.sha256
+		self.reconfiguring_replicas_count = 0
+		self.reconfiguring_replicas = False
 		self.INFO = "[OLYMPUS] "
+		self.failure_config_map = dict()
 		log.info(self.INFO + "Olympus setup complete, assigned ID :" + str(self.olympus_id))
 
 	def run():
 		log.info(self.INFO + "Running test case : " + str(init_config["test_case_name"]))
+
 		make_new_replica()
 
 		# Wait untill all the clients register with olympus
@@ -62,6 +65,98 @@ class Olympus(process):
 		for client in self.client_list:
 			send(("replicas_ready", active_config),to=client)
 
+		##populating the failure_config_map
+		for key in list(self.init_config.keys()):
+			if (key.startswith("failures[")):
+				fail = self.init_config[key]
+				failure_key = key
+
+				config_num = int(failure_key.split(',')[0].lstrip('failures['))
+				replica_index = int(failure_key.split(',')[1].strip().replace(']',''))
+
+				all_failures = fail.split(';')
+				shuttle_type_map = dict()
+
+				for failure in all_failures:
+					failure = failure.split(',')
+					
+					if (len(failure) == 2):
+						client_index = None
+						shuttle_type = failure[0].split('(')[0].strip()
+						msg_count = int(failure[0].split('(')[1].replace(')','').strip())
+
+						if ((client_index and client_index > len(self.client_list)) or replica_index > len(self.replica_list)):
+							log.error(self.INFO +"Error processing failure injection.")
+							return
+						
+						shuttle_key = failure[0].strip()
+
+						if shuttle_key not in shuttle_type_map:
+							opt = []
+							opt_arg = []
+							opt.append(failure[1].replace(')','').split('(')[0].strip())
+							
+							if (failure[1].replace(')','').split('(')[1].strip() == ''):
+								opt_arg.append(None)
+							else:
+								opt_arg.append(failure[1].replace(')','').split('(')[1].strip())
+							
+							print("Failure operations in new config map:", opt)
+							failure_config = FailureConfig(None, msg_count, shuttle_type, opt, opt_arg)
+							shuttle_type_map[shuttle_key] = failure_config
+
+						else:
+							shuttle_type_map[shuttle_key].opt_type.append(failure[1].replace('(','').replace(')','').strip())
+							
+							if (failure[1].replace(')','').split('(')[1].strip() == ''):
+								shuttle_type_map[shuttle_key].opt_arg.append(None)
+							else:
+								shuttle_type_map[shuttle_key].opt_arg.append(failure[1].replace(')','').split('(')[1].strip())
+
+							print("Failure operations in old config map:", shuttle_type_map[shuttle_key].opt_type)
+
+					elif(len(failure) == 3):
+						shuttle_type = failure[0].split('(')[0].strip()
+						msg_count = int(failure[1].replace(')', '').strip())
+						client_index = int(failure[0].split('(')[1].strip())
+
+						if ((client_index and client_index > len(self.client_list)) or replica_index > len(self.replica_list)):
+							log.error(self.INFO +"Error processing failure injection.")
+							return
+						
+						shuttle_key = failure[0].strip() + ',' + str(msg_count) + ')'
+
+						if shuttle_key not in shuttle_type_map:
+							opt = []
+							opt_arg = []
+							opt.append(failure[2].replace('(','').replace(')','').strip())
+							if (failure[2].replace(')','').split('(')[1].strip() == ''):
+								opt_arg.append(None)
+							else:
+								opt_arg.append(failure[2].replace(')','').split('(')[1].strip())
+							
+							failure_config = FailureConfig(self.client_list[client_index-1], \
+																msg_count, shuttle_type, opt, opt_arg)
+
+							shuttle_type_map[shuttle_key] = failure_config
+						else:
+							shuttle_type_map[shuttle_key].opt_type.append(failure[2].replace('(','').replace(')','').strip())
+							print("Failure operations in old config map:", shuttle_type_map[shuttle_key].opt_type)
+							
+							if (len(failure[1].replace(')','').split('(')) == 1):
+								shuttle_type_map[shuttle_key].opt_arg.append(None)
+							else:
+								shuttle_type_map[shuttle_key].opt_arg.append(failure[1].replace(')','').split('(')[1].strip())
+
+					print("########### FAILURE CONFIG #############")
+					print("msg count : ",shuttle_type_map[shuttle_key].msg_count)
+					print("client ID : ",shuttle_type_map[shuttle_key].client_id)
+					print("type :", shuttle_type_map[shuttle_key].shuttle_type)
+					print("operations : ", shuttle_type_map[shuttle_key].opt_type)
+					print("opt arg : ", shuttle_type_map[shuttle_key].opt_arg)
+
+				self.failure_config_map[config_num] = [replica_index,shuttle_type_map]
+
 		# Send fault injection to everyone
 		send_fault_injection()
 
@@ -73,50 +168,22 @@ class Olympus(process):
 		config_id = uuid.uuid4()
 		spawn_replicas()
 		# This will help to keep slot number cont during reconfig
+		log.info(self.INFO + "CURRENT CONFIG : " + str(config_id))
 		configs.append(config_id)
 		active_config = config_id
 
 	def send_fault_injection():
-		failure = None
-		failure_key = None
-		for key in list(self.init_config.keys()):
-			if (key.startswith("failures[0")):
-				fail = self.init_config[key]
-				failure_key = key
-				break
+		if reconfiguring_replicas_count in failure_config_map:
+			replica_index, shuttle_type_map = failure_config_map[reconfiguring_replicas_count]
 
-		# We don't have failures for this configuration
-		if (fail == None):
-			return
-
-		# Replica to which we need to send fault object
-		replica_index = int(failure_key.split(',')[1].strip().replace(']',''))
+			log.info(self.INFO + "Sending failure config to " + str(self.replica_list[replica_index-1]))
 		
-		# If we have to perform more than one failure for the same message.
-		all_failures = fail.split(';')
+			failure_config_list = list()
 
-		opt = []
-		msg_count = -1
-		client_index = -1
-		shuttle_type = None
+			for key,val in shuttle_type_map.items():
+				failure_config_list.append(val)
 
-		for failure in all_failures:
-			failure = failure.split(',')
-			msg_count = int(failure[1].replace(')', '').strip())
-
-			opt.append(failure[2].replace('(','').replace(')','').strip())
-			client_index = int(failure[0].split('(')[1].strip())
-			shuttle_type = failure[0].split('(')[0].strip()
-
-		if (client_index > len(self.client_list) or replica_index > len(self.replica_list)):
-			log.error(self.INFO +"Error processing failure injection.")
-			return
-
-		print("Failure operations :", opt)
-		self.failure_config = FailureConfig(self.client_list[client_index-1], \
-											msg_count, shuttle_type, opt)
-		log.info(self.INFO + "Sending failure config to " + str(self.replica_list[replica_index-1]))
-		send(("failure_config",self.failure_config), to=self.replica_list[replica_index-1])
+			send(("failure_config_list",failure_config_list), to=self.replica_list[replica_index-1])
 
 
 	# This method spawns required number of replica and it handles two cases
@@ -147,6 +214,10 @@ class Olympus(process):
 				replica_config.head_timeout = self.head_timeout
 				replica_config.nonhead_timeout = self.nonhead_timeout
 
+				# sending the reconfiguration count to replica, to facilitate appropriate trigger of failure  
+				if self.reconfiguring_replicas == True:
+					replica_config.new_config_count = self.reconfiguring_replicas_count
+
 				setup(self.replica_list[index],[replica_config])
 				start(self.replica_list[index])
 
@@ -162,12 +233,19 @@ class Olympus(process):
 			for replica in self.replica_list:
 				send(("exit"), to=replica)
 			self.replica_list = []
+			
+			# making boolean reconfiguration == True and incrementing reconfig count, to handle failure injection on replicas
+			self.reconfiguring_replicas = True
+			self.reconfiguring_replicas_count += 1
+
 			log.info(self.INFO + "Starting new set of processes for reconfiguration.")
 			spawn_replicas()
-
 			# Sends client info to everyone after re-spawning them
 			for replica in self.replica_list:
 				send(("client_details", self.clients, self.current_slot), to=replica)
+
+			# Sends new fault config info to appropriate replica after re-spawning them
+			send_fault_injection()
 
 	# This method will generate signing keys and encoded verification keys for
 	# all the replicas. We save it into two seperate dict.
@@ -189,7 +267,7 @@ class Olympus(process):
 
 	def make_replica_config(id, signing_key):
 		replica_config = ReplicaConfig(id, self.verify_keys, signing_key,\
-						 self.data_store, ACTIVE, self.replica_list, self.init_config[TESTCASE_NAME])
+						 self.data_store, ACTIVE, self.replica_list, self.init_config[TESTCASE_NAME], int(self.init_config["checkpoint_num"]))
 		return replica_config
 
 	# This method adds head and tail info for every replicaconfig object created.
@@ -221,6 +299,10 @@ class Olympus(process):
 	def hash(result):
 		digest = self.HASHER(pickle.dumps(result), encoder=nacl.encoding.HexEncoder)
 		return digest
+
+
+	def verify_client_proof(proof):
+		return True
 
 	# After catch up response is received, we need to send any pending response to
 	# the client.
@@ -393,6 +475,7 @@ class Olympus(process):
 			else:
 				log.info(self.INFO + "No valid quorums found.")
 
+
 	# This method will send required details to the client
 	def send_client_config(client):
 		conf = ClientConfig(self.verify_keys, self.replica_list, int(self.init_config[TOLERENCE]))
@@ -422,6 +505,7 @@ class Olympus(process):
 		send_client_config(c)
 
 	def receive(msg=("is_config_changed", config_id), from_=c):
+		print ("ASKED :" + str(config_id), " CURRENT : " + str(config_id))
 		log.info(self.INFO + "Received config change check request from client " + str(c))
 		is_changed = False
 		if (self.active_config != config_id):
@@ -435,8 +519,11 @@ class Olympus(process):
 
 		# Verifying 
 		if ("client" in str(sender).lower()):
-			log.info(self.INFO + "Received reconfig request from a client")
-			log.info(self.INFO + "Client request verified.")
+			log.info(self.INFO + "Received reconfig request from a client, along with the proof. Let us verify the proof first.")
+			if (verify_client_proof(proof)):
+				log.info(self.INFO + "Proof of misbehaviour verified, let us start the process of reconfig.")
+			else:
+				return
 
 		if (self.is_config_in_progress == False):
 			self.is_config_in_progress = True
@@ -450,7 +537,7 @@ class Olympus(process):
 	def receive(msg=("wedged_data", wedged_data), from_=r):
 		log.info(self.INFO + "Received wedged data from " + str(r))
 		self.wedged_data[r] = wedged_data
-		if (wedged_data.slot > self.current_slot):
+		if (wedged_data.slot >= self.current_slot):
 			self.current_slot = wedged_data.slot
 
 		# As soon as we receive t+1 th wedged data we start making quorums

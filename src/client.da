@@ -26,7 +26,7 @@ class Client(process):
 		self.replica_list = None
 		self.replicas_ready = False
 		self.olympus = olympus
-		self.is_reconfig_finished = False
+		self.is_reconfig_finished = True
 		self.data_store = dict()
 		self.retransmit_result = dict()
 		self.config_timer = None
@@ -142,11 +142,11 @@ class Client(process):
 
 		if (type == "new"):
 			send(("operation", operation, None, None), to=self.replica_head)
-			log.info(self.INFO + "sending operation request to head with msgID : "\
+			log.info(self.INFO + "sending operation request to"+ str(self.replica_head)+" with msgID : "\
 					+str(operation.msg_id) + " operation : {" + str(operation.type) + \
 					"(" + str(operation.data.key) + "," + str(operation.data.value) + ")}")
 			self.msg_details[operation.msg_id] = ClientMessage(False, operation)
-			
+
 			if(await(self.msg_details[operation.msg_id].is_response_received == True or \
 				self.msg_details[operation.msg_id].is_response_received == "Pending")):
 				continue
@@ -201,15 +201,17 @@ class Client(process):
 		if (len(response.result_proof.statements) < len(self.replica_list)):
 			index = 1
 
+		log.info(self.INFO + "LENGTH : "  + str(len(response.result_proof.statements)) + " " + str(response.msg_id))
 		total_found = 0
 
-		for statement in response.result_proof.statements:
 
+		for statement in response.result_proof.statements:
 			verify_key = nacl.signing.VerifyKey(self.replica_keys[self.replica_list[index]], \
 												encoder=nacl.encoding.HexEncoder)
 			index += 1
 			res = pickle.loads(verify_key.verify(statement))
 
+			log.info(self.INFO + "RESULT : " + str(res.result))
 
 			if (prev_res is not None and (prev_res.operation.type != res.operation.type or \
 				prev_res.operation.data.key != res.operation.data.key or \
@@ -220,9 +222,10 @@ class Client(process):
 				continue
 
 			total_found += 1
-			if (total_found == (self.tolerance + 1)):
+			if (total_found >= (self.tolerance + 1)):
 				log.info(self.INFO + "Valid t+1 found.")
 				log.info(self.INFO + "Verification of result for msg "+str(response.msg_id)+" succesful.")
+				log.info(self.INFO + "TOTAL : " + str(total_found))
 				return True
 
 			prev_res = res
@@ -273,6 +276,9 @@ class Client(process):
 	# when replcias in quorum has not seen this.)
 	def handle_any_retransmission():
 		# Handle retransmitting if any
+
+		await(self.is_reconfig_finished == True)
+
 		for msg in list(self.msg_details.keys()):
 			if (self.msg_details[msg].is_response_received == "Pending"):
 				log.info(self.INFO + str(self.msg_details[msg].operation.msg_id) + " Re-transmitting")
@@ -299,6 +305,7 @@ class Client(process):
 
 	def receive(msg=("result_from_olympus", response), from_=o):
 
+		self.is_reconfig_finished = False
 		# If we receive response for message that we have already got response, then neglect
 		if (self.msg_details[response.msg_id].is_response_received == True):
 			await(self.is_reconfig_finished == True)
