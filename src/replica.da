@@ -474,8 +474,7 @@ class Replica(process):
 						self.history.pop()
 
 			elif (opt == DROP):
-				log.info(self.INFO + "drop failure is being injected")
-				print("injecting drop faliure")
+				log.info(self.INFO + "Drop failure is being injected")
 				return True, True
 
 			elif (opt == INCREMENT_SLOT):

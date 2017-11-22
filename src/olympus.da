@@ -399,24 +399,30 @@ class Olympus(process):
 		for replica in quorum:
 			send(("running_state"), to=replica)
 
-		await(len(self.running_state_data) == len(quorum))
+		if(await(len(self.running_state_data) == len(quorum))):
+			temp = set()
+			for data in list(self.running_state_data.values()):
+				temp.add(hash(sorted(data.items())))
 
-		temp = set()
-		for data in list(self.running_state_data.values()):
-			temp.add(hash(sorted(data.items())))
-
-		if (len(temp) == 1):
-			log.info(self.INFO + "Running state verified.")
-			log.info(self.INFO + "Running state : " + str(self.running_state_data[quorum[0]]))
-			self.data_store = data
-			clear_data()
-			make_new_replica()
-			self.is_config_in_progress = False	
-		else:
-			if (len(self.quorums) > 0):
-				start_quorum_check()
+			if (len(temp) == 1):
+				log.info(self.INFO + "Running state verified.")
+				log.info(self.INFO + "Running state : " + str(self.running_state_data[quorum[0]]))
+				self.data_store = data
+				clear_data()
+				make_new_replica()
+				self.is_config_in_progress = False	
 			else:
-				log.info(self.INFO + "No valid quorums found.")
+				if (len(self.quorums) > 0):
+					log.info(self.INFO + "Current quorum failed, getting next one.")
+					start_quorum_check()
+				else:
+					log.info(self.INFO + "No valid quorums found.")
+		elif (timeout(10)):
+			log.info(self.INFO + "TIMEOUT, getting next quorum")
+			if (len(self.quorums) > 0):
+					start_quorum_check()
+			else:
+					log.info(self.INFO + "No valid quorums found.")
 
 	def clear_data():
 		self.wedged_data = dict()
@@ -469,10 +475,12 @@ class Olympus(process):
 				get_running_state(quorum)
 
 		else:
+			await(len(self.wedged_data) >= 3)
 			if (len(self.quorums) > 0):
 				log.info(self.INFO + " checking next quorum.")
 				start_quorum_check()
 			else:
+				print('-----------------')
 				log.info(self.INFO + "No valid quorums found.")
 
 
@@ -546,6 +554,7 @@ class Olympus(process):
 			temp.extend(combinations(list(self.wedged_data.keys()), int(self.init_config[TOLERENCE]) + 1))
 			# As soon as we receive t+1, they will be our first quorum
 			for item in temp:
+				print("Appending to the quorum - ", len(self.wedged_data))
 				self.quorums.add(item)
 
 			# Print and call this methof for the first time.
