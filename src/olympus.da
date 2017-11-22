@@ -456,7 +456,17 @@ class Olympus(process):
 
 				# wait till all of them send hashed response for caught up message
 
-				await(len(self.caughtup_hash) == len(catch_up_replicas))
+				if (await(len(self.caughtup_hash) == len(catch_up_replicas))):
+					continue
+				elif(timeout(10)):
+					self.caughtup_hash = dict()
+					log.info(self.INFO + "Catch up timeout, choosing next quorum")
+					if (len(self.quorums) > 0):
+						start_quorum_check()
+					else:
+						log.info(self.INFO + "No valid quorums found.")
+						return
+
 				# time.sleep(10)
 				log.info(self.INFO + "Verifying if hash of all catchup is same.")
 				if (all(x == list(self.caughtup_hash.values())[0] for x in self.caughtup_hash.values()) == True):
@@ -473,6 +483,26 @@ class Olympus(process):
 			else:
 				log.info(self.INFO + "No need to catch up, lets just get the latest result for all clients")
 				# If we are not sending catch up, then we need latest results that has to be sent to client
+				
+				if (self.init_config[TESTCASE_NAME]=="test_catchup"):
+					log.info(self.INFO + "For the case of testcase, lets send catchup")
+
+					for replica in quorum:
+						log.info(self.INFO + "Sending catch up to " + str(replica))
+						send(("catch_up", self.wedged_data[longest_replica].history), to=replica)
+
+					if (await(len(self.caughtup_hash) == len(quorum))):
+						continue
+					elif(timeout(10)):
+						self.caughtup_hash = dict()
+						log.info(self.INFO + "Catch up timeout, choosing next quorum")
+						if (len(self.quorums) > 0):
+							start_quorum_check()
+							return
+						else:
+							log.info(self.INFO + "No valid quorums found.")
+							return
+
 				send(("get_latest_result"), to=longest_replica)
 				await(len(self.latest_result) > 0)
 				send_pending_result_to_client([longest_replica])
@@ -558,7 +588,6 @@ class Olympus(process):
 			temp.extend(combinations(list(self.wedged_data.keys()), int(self.init_config[TOLERENCE]) + 1))
 			# As soon as we receive t+1, they will be our first quorum
 			for item in temp:
-				print("Appending to the quorum - ", len(self.wedged_data))
 				self.quorums.add(item)
 
 			# Print and call this methof for the first time.

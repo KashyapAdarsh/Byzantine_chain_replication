@@ -351,6 +351,7 @@ class Replica(process):
 	
 		ret_index = failure_config_list_lookup(RESULT_SHUTTLE) 
 		if (ret_index != -1):
+
 			if(self.result_shuttle_count[self.failure_config_list[ret_index].client_id] == self.failure_config_list[ret_index].msg_count):
 				if (msg != "dummy"):
 					self.result_shuttle_count[self.failure_config_list[ret_index].client_id] = -100
@@ -393,7 +394,7 @@ class Replica(process):
 
 		ret_index = failure_config_list_lookup(CATCH_UP) 
 		if (ret_index != -1):		
-			if (self.catch_up_req_count == self.failure_config_list.msg_count):
+			if (self.catch_up_req_count == self.failure_config_list[ret_index].msg_count):
 				if (msg != "dummy"):
 					self.catch_up_req_count = -100
 				return ret_index
@@ -941,6 +942,16 @@ class Replica(process):
 
 	def receive(msg=("catch_up", longest_history), from_=o):
 		log.info(self.INFO + "Received request to catch up.")
+		self.catch_up_req_count += 1
+
+		ret_index = is_failure_condition_satisfied(str("catch_up"))
+		if (self.failure_config_list is not None and ret_index != -1):
+			print("failure condition satisfied for catchup, now injecting failure")
+			dummy1, dummy2 = perform_failure_injection(None, \
+						None, self.config.replica_list.index(self.config.id), ret_index)
+
+			if dummy1 == True or dummy2 == True:
+				return
 		catch_up(longest_history)
 
 	def receive(msg=("running_state"), from_=o):
