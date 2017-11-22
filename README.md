@@ -13,9 +13,9 @@ PLATFORM
 
 Distribution Information
 
-Distributor ID 	:    Ubuntu
-Description		:    Ubuntu 16.04.1 LTS
-Release			:    16.04
+Distributor ID :  Ubuntu
+Description	:  Ubuntu 16.04.1 LTS
+Release  :  16.04
 
 Kernel Version
 
@@ -139,20 +139,54 @@ operations for that particular operation.Further ‘Populate_workload_operations
 uses the operation list and generates the pseudorandom workload list using operation_type and 
 offset_operation_type information from each tuple.
 
+---------------
+RECONFIGURATION
+---------------
+
+As a part of phase 3 we have implemented reconfiguration, here the main idea is :
+1) Wedge request is sent by olympus
+2) All replicas become immutable and send their wedged data
+3) As soon as replicas receives t+1 wedged response, it makes its first quorum and starts quorum check.
+4) In the background more combination of quorums are made.
+5) Checkpoint, history and slots consistency is checked from the wedged response of replicas in the quorum,
+   if any of these check fails then we take next quorum
+6) Longest history is identified if any.
+7) catch up message is sent to all replicas which are lacking in the history
+8) Replicas will catchup and also send a <client, latest result> data to olympus along with hash of datastore
+9) Catch up's are verified.
+10) Pending results are sent to client.
+11) Running state is requested from all replicas in quorum.
+12) Running state is verified.
+13) all replicas are killed and new replicas are spawned.
+14) required setup for replicas are performed (key generation, sharing info with clients, giving failure config info)
+15) Once client realizes config is changed, it will send any pending msg or new msg to new head.
+
+
+----------------------------
+PERIODIC CONFIG CHANGE CHECK
+----------------------------
+
+This logic is a part of client where client periofically checks if replica config is changed in olympus.
+We use a background thread to do this, we have a call back function which will be invoked at a particular
+interval and in this method we exchange messsages with client to check if configuration is updated. If configuration
+is updated then first get latest confi information and we send any pending/new requests to new head.
+
+-------------
+CHECKPOINTING
+-------------
+We have implemented checkpoints based on the slot count that head receives, at every interval of say 5 slots we 
+invoke checkpointing where head will start a new shuttle with the slot details and also hash of datastore. When 
+this checkpoint shuttle travels up the chain all replicas will verify it and also save the checkpoint details
+which will have to be sent to olympus on request.
+
 --------------------
 BUGS AND LIMITATIONS
 --------------------
 
 These are certain bugs and limitations that we have for the current implementation.
 
-1)	We have not implemented certain main features such as reconfiguration, quorum management and others
-	that are meant to be implemented in phase-3.
-2)	Everytime our replica or client recognizes some issue with order or result proofs we just log that info saying
-	we need to reconfigure and retrun by making replicas immutable.
-3)	We have currently tested our system only on multiple nodes within the same host, we have not tried connecting
-	multiple host[computer's or VM's]. But it can run using multiple hosts as well.
-4)	Our code does not generate seperate log files for seperate configurations, it overwrites old log files if any.
-5)	Our implementation requires that config file has node details for replica and clients seperated by ';'
+1)	Our code does not generate seperate log files for seperate configurations, it overwrites old log files if any.
+2)	Our implementation requires that config file has node details for replica and clients seperated by ';'
 
 -------------
 CONTRIBUTIONS
@@ -177,6 +211,8 @@ Adarsh implemented the following features:
 -	Part of main driver code.
 -	Few triggers and failure injection
 -	Logging implementation
+-  Checkpointing
+-  Reconfiguration
 
 Kanishta implemented the following features:
 
@@ -185,6 +221,8 @@ Kanishta implemented the following features:
 -	Pseudorandom workload generation
 -	Client data verification at the end of testcase
 -	Few trigger and failure injection
+-  Re-implemented logic to read the intial conig file
+-  Implemented all triggers and failures required for phase3
 
 ---------
 CODE SIZE
@@ -193,8 +231,8 @@ CODE SIZE
 Numbers of non-blank non-comment lines of code (LOC):
 
 	Algorithm : 540
-	Other 	  : 376
-	Total 	  : 916
+	Other : 376
+	Total : 916
 
 
 Used CLOC https://github.com/AlDanial/cloc
