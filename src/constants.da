@@ -54,6 +54,7 @@ INCREMENT_SLOT = "increment_slot"
 EXTRA_OP = "extra_op"
 INVALID_ORDER_SIG = "invalid_order_sig"
 INVALID_RESULT_SIG = "invalid_result_sig"
+DROP_CHECK_POINT = "drop_checkpoint_stmts"
 
 PUT_OPS = "put('movie1','star');put('movie2','pulp');put('movie3','reservoir');put('movie4','kill');put('movie5','jackie')"
 APPEND_OPS = "append('movie1',' wars');append('movie3',' fiction');append('movie3',' dogs');append('movie4',' bill');append('movie5',' brown')"

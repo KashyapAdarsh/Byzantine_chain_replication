@@ -201,7 +201,6 @@ class Client(process):
 		if (len(response.result_proof.statements) < len(self.replica_list)):
 			index = 1
 
-		log.info(self.INFO + "LENGTH : "  + str(len(response.result_proof.statements)) + " " + str(response.msg_id))
 		total_found = 0
 
 
@@ -210,8 +209,6 @@ class Client(process):
 												encoder=nacl.encoding.HexEncoder)
 			index += 1
 			res = pickle.loads(verify_key.verify(statement))
-
-			log.info(self.INFO + "RESULT : " + str(res.result))
 
 			if (prev_res is not None and (prev_res.operation.type != res.operation.type or \
 				prev_res.operation.data.key != res.operation.data.key or \
@@ -225,7 +222,6 @@ class Client(process):
 			if (total_found >= (self.tolerance + 1)):
 				log.info(self.INFO + "Valid t+1 found.")
 				log.info(self.INFO + "Verification of result for msg "+str(response.msg_id)+" succesful.")
-				log.info(self.INFO + "TOTAL : " + str(total_found))
 				return True
 
 			prev_res = res

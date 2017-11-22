@@ -167,7 +167,7 @@ class Replica(process):
 				
 				ret_index = is_failure_condition_satisfied(str("checkpoint_request"))
 				if (self.failure_config_list is not None and ret_index != -1):
-					dummy1, dummy2 = perform_failure_injection(None, \
+					dummy1, dummy2 = perform_failure_injection(checkpoint_shuttle, \
 						None, self.config.replica_list.index(self.config.id), ret_index)	
 
 				# If Not tail then keep sending it ahead
@@ -178,7 +178,7 @@ class Replica(process):
 					
 					ret_index = is_failure_condition_satisfied(str("checkpoint_request"))
 					if (self.failure_config_list is not None and ret_index != -1):
-						dummy1, dummy2 = perform_failure_injection(None, \
+						dummy1, dummy2 = perform_failure_injection(checkpoint_shuttle, \
 							None, self.config.replica_list.index(self.config.id), ret_index)
 
 					process_checkpoint(checkpoint_shuttle)
@@ -189,7 +189,7 @@ class Replica(process):
 				
 				ret_index = is_failure_condition_satisfied(str("checkpoint_request"))
 				if (self.failure_config_list is not None and ret_index != -1):
-					dummy1, dummy2 = perform_failure_injection(None, \
+					dummy1, dummy2 = perform_failure_injection(checkpoint_shuttle, \
 						None, self.config.replica_list.index(self.config.id), ret_index)
 
 				process_checkpoint(checkpoint_shuttle)
@@ -202,9 +202,10 @@ class Replica(process):
 
 	def process_checkpoint(checkpoint_shuttle):
 		
-		log.info(self.INFO + "Verifying checkpoint.")
-		if (len(checkpoint_shuttle.statements) < ((len(self.config.replica_list) / 2) + 1)):
-			log.info(self.INFO + "Verification of checkpoint failed, asking olympus to reconfigure")
+		log.info(self.INFO + "Verifying checkpoint." )
+		if (len(checkpoint_shuttle.statements) < (int(len(self.config.replica_list) / 2) + 1)):
+			log.ERROR(self.INFO + "Verification of checkpoint failed, asking olympus to reconfigure")
+			notify_olympus(None)
 		else:
 			log.info(self.INFO + "Checkpoint verification success.")
 
@@ -490,6 +491,13 @@ class Replica(process):
 
 				# Modifying original result statement of this replica to something wrong
 				result_shuttle.statements[index] = sign_statement(res, True)
+
+			elif (opt == DROP_CHECK_POINT):
+				log.info(self.INFO + "Performing operation drop checkpoint statement")
+				# order_shuttle is our checkpoint shuttle here
+				t_1 = int(len(self.config.replica_list) / 2) + 1;
+				for i in range(0,t_1):
+					 del order_shuttle.statements[i]
 
 			else:
 				log.info(self.INFO + "Failure injection operation not recognized")
