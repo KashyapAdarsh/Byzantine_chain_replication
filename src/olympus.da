@@ -112,6 +112,7 @@ class Olympus(process):
 							else:
 								shuttle_type_map[shuttle_key].opt_arg.append(failure[1].replace(')','').split('(')[1].strip())
 
+
 					elif(len(failure) == 3):
 						shuttle_type = failure[0].split('(')[0].strip()
 						msg_count = int(failure[1].replace(')', '').strip())

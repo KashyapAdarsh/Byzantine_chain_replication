@@ -888,7 +888,6 @@ class Replica(process):
 		ret_index = is_failure_condition_satisfied(str("new configuration"))
 		if (self.failure_config_list is not None and ret_index != -1 and \
 			(any(i in opts for i in self.failure_config_list[ret_index].opt_type))):
-			print("failure condition satisfied for new configuration, now injecting failure")
 			dummy1, dummy2 = perform_failure_injection(None, \
 						None, self.config.replica_list.index(self.config.id), ret_index)
 
