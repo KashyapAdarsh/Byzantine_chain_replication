@@ -152,6 +152,7 @@ class Replica(process):
 			#keeping count of number of checkpoints made to facilitate trigger when needed 
 			if self.config.is_head:
 				self.checkpoint_count += 1
+			log.info(self.INFO + "Checkpoint count : " + str(self.checkpoint_count))
 
 			send(("checkpoint_forward", checkpoint_shuttle), to=self.config.next_replica_id)
 
@@ -205,7 +206,7 @@ class Replica(process):
 		
 		log.info(self.INFO + "Verifying checkpoint." )
 		if (len(checkpoint_shuttle.statements) < (int(len(self.config.replica_list) / 2) + 1)):
-			log.ERROR(self.INFO + "Verification of checkpoint failed, asking olympus to reconfigure")
+			log.error(self.INFO + "Verification of checkpoint failed, asking olympus to reconfigure")
 			notify_olympus(None)
 		else:
 			log.info(self.INFO + "Checkpoint verification success.")
@@ -502,6 +503,12 @@ class Replica(process):
 				t_1 = int(len(self.config.replica_list) / 2) + 1;
 				for i in range(0,t_1):
 					 del order_shuttle.statements[i]
+
+			elif (opt == EXTRA_OP):
+				log.info(self.INFO + "Performing failure injection extra_op")
+				operation = Operation(PUT, None, Data("a","a"), None)
+				execute_operation(operation, "normal")
+				log.info(self.INFO + "Datastore : " + str(self.config.data_store))
 
 			else:
 				log.info(self.INFO + "Failure injection operation not recognized")

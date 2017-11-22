@@ -397,9 +397,10 @@ class Olympus(process):
 	def get_running_state(quorum):
 		log.info(self.INFO + "Catch up successfull, getting the running state.")
 		for replica in quorum:
+			log.info(self.INFO + "Asking replica " + str(replica) + " for running state.")
 			send(("running_state"), to=replica)
 
-		if(await(len(self.running_state_data) == len(quorum))):
+		if(await(len(self.running_state_data) == 2)):
 			temp = set()
 			for data in list(self.running_state_data.values()):
 				temp.add(hash(sorted(data.items())))
@@ -413,6 +414,8 @@ class Olympus(process):
 				self.is_config_in_progress = False	
 			else:
 				if (len(self.quorums) > 0):
+					self.running_state_data = dict()
+					log.info(self.INFO + "Running state verification failed.")
 					log.info(self.INFO + "Current quorum failed, getting next one.")
 					start_quorum_check()
 				else:
@@ -420,9 +423,10 @@ class Olympus(process):
 		elif (timeout(10)):
 			log.info(self.INFO + "TIMEOUT, getting next quorum")
 			if (len(self.quorums) > 0):
+					self.running_state_data = dict()
 					start_quorum_check()
 			else:
-					log.info(self.INFO + "No valid quorums found.")
+				log.info(self.INFO + "No valid quorums found.")
 
 	def clear_data():
 		self.wedged_data = dict()
@@ -572,6 +576,7 @@ class Olympus(process):
 
 	def receive(msg=("running_state_data", data), from_=r):
 		log.info(self.INFO + "Received running state from "+ str(r))
+		print(data)
 		self.running_state_data[r] = data
 
 	def receive(msg=("latest_result", latest_result), from_=r):
