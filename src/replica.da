@@ -28,6 +28,7 @@ class Replica(process):
 		self.test = False
 		self.history = []
 		self.checkpoint = []
+		self.slot_list = []
 		self.latest_result = dict()
 		self.data_store_backup = dict()
 		self.olympus = None
@@ -243,6 +244,10 @@ class Replica(process):
 		index = 0
 		prev_res = None
 		slot_or_res = []
+
+		if len(self.slot_list) >=2 and self.slot_list[-1] != self.slot_list[-2]+1:
+			log.info(self.INFO + "holes in slots, sending false as verify shuttle result")
+			return False
 
 		# This will check if there is anything dropped from statements
 		if (shuttle_type == "result_proof_reverse_direction"):
@@ -520,6 +525,8 @@ class Replica(process):
 		operation = order_shuttle.operation
 
 		slot =  order_shuttle.slot
+
+		self.slot_list.append(slot)
 		
 		# This is required so that each replicas will know current slot.
 		init_slot(slot)
