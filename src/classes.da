@@ -8,11 +8,11 @@ class data:
 # intial configurations that every replica will receive
 
 class ReplicaConfig:
-	def __init__(self, id, replica_keys, signing_key, data_store, mode, replica_list, testcase_name, checkpoint_num):
+	def __init__(self, id, replica_keys, signing_key, data_store, mode, replica_list, testcase_name, checkpoint_num, config_count):
 		self.id = id
 		self.head_id = None
 		self.signing_key = signing_key
-		self.new_config_count = None
+		self.new_config_count = config_count
 		self.replica_keys = replica_keys
 		self.replica_list = replica_list
 		self.prev_replica_id = None

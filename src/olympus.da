@@ -267,7 +267,8 @@ class Olympus(process):
 
 	def make_replica_config(id, signing_key):
 		replica_config = ReplicaConfig(id, self.verify_keys, signing_key,\
-						 self.data_store, ACTIVE, self.replica_list, self.init_config[TESTCASE_NAME], int(self.init_config["checkpoint_num"]))
+						 self.data_store, ACTIVE, self.replica_list, self.init_config[TESTCASE_NAME], \
+						 	int(self.init_config["checkpoint_num"]), int(reconfiguring_replicas_count + 1))
 		return replica_config
 
 	# This method adds head and tail info for every replicaconfig object created.
@@ -442,7 +443,8 @@ class Olympus(process):
 		if (res == True):
 
 			if (longest_replica == None):
-				log.info(self.INFO + "No history recorded yet.")
+				log.info(self.INFO + "No history recorded yet, making new replicas")
+				make_new_replica()
 				return
 
 			log.info(self.INFO + "Valid quorum found and checking if we need to catch up the history.")
@@ -547,7 +549,6 @@ class Olympus(process):
 		send_client_config(c)
 
 	def receive(msg=("is_config_changed", config_id), from_=c):
-		print ("ASKED :" + str(config_id), " CURRENT : " + str(config_id))
 		log.info(self.INFO + "Received config change check request from client " + str(c))
 		is_changed = False
 		if (self.active_config != config_id):

@@ -366,6 +366,8 @@ class Replica(process):
 		
 		ret_index = failure_config_list_lookup(NEW_CONFIGURATION) 
 		if (ret_index != -1):
+			print("#########################")
+			print(self.config.new_config_count)
 			if (self.config.new_config_count == self.failure_config_list[ret_index].msg_count):
 				if (msg != "dummy"):
 					self.config.new_config_count = -100
@@ -824,13 +826,16 @@ class Replica(process):
 			self.client_counts[sender] += 1
 			opt = operation
 
+		opts = [DROP, TURNCATE_HISTORY, CRASH, SLEEP]
 		ret_index = is_failure_condition_satisfied(str("dummy"))
-		if (self.failure_config_list is not None and ret_index != -1 and (DROP in self.failure_config_list[ret_index].opt_type)):
+		if (self.failure_config_list is not None and ret_index != -1 and \
+			(any(i in opts for i in self.failure_config_list[ret_index].opt_type))):
 			log.info(self.INFO + "Failure condition satisfied for msg " + str(opt.msg_id))
 			dummy1, dummy2 = perform_failure_injection(None, \
 						None, self.config.replica_list.index(self.config.id), ret_index)
 
-			if dummy1 == True or dummy2 == True:
+			if (DROP in self.failure_config_list[ret_index].opt_type and \
+				(dummy1 == True or dummy2 == True)):
 				return
 
 		if (self.config.mode == ACTIVE):
@@ -851,9 +856,12 @@ class Replica(process):
 				log.info(self.INFO + "Received retransmission forward from replicas")
 
 				# To check trigger for forwarded request
-				
+
+				opts = [DROP, TURNCATE_HISTORY, CRASH, SLEEP]
 				ret_index = is_failure_condition_satisfied(str(operation.msg_id))
-				if (self.failure_config_list is not None and ret_index != -1 and (DROP in self.failure_config_list[ret_index].opt_type)):
+				if (self.failure_config_list is not None and ret_index != -1 and \
+					(any(i in opts for i in self.failure_config_list[ret_index].opt_type))):
+
 					log.info(self.INFO + "Failure Injection condition satisfied for msg "+ str(operation.msg_id))
 					self.tamper_next_send = True
 			else:
@@ -876,11 +884,20 @@ class Replica(process):
 		log.info(self.INFO + "Received failure config from olympus")
 		self.failure_config_list = failure_config_list
 
+		opts = [CRASH, SLEEP]
+		ret_index = is_failure_condition_satisfied(str("new configuration"))
+		if (self.failure_config_list is not None and ret_index != -1 and \
+			(any(i in opts for i in self.failure_config_list[ret_index].opt_type))):
+			print("failure condition satisfied for new configuration, now injecting failure")
+			dummy1, dummy2 = perform_failure_injection(None, \
+						None, self.config.replica_list.index(self.config.id), ret_index)
+
 	# This receives client details from olympus, we need this because we start
 	# replicas before all clients register
 
 	def receive(msg=('client_details', client_info, slot), from_=o):
 		log.info(self.INFO + "Received client information")
+
 		self.config.clients = client_info
 		# Save the olympus info
 		self.olympus = o
@@ -921,17 +938,16 @@ class Replica(process):
 		#wedged_data = sign_statement(wedged_data)
 		# increasing the wedge_count to appropriately trigger wedge_request failure
 		wedge_request_count += 1
-
+		opts = [DROP, TURNCATE_HISTORY, CRASH, SLEEP]
 		ret_index = is_failure_condition_satisfied(str("wedge_request"))
 		if (self.failure_config_list is not None and ret_index != -1 and \
-			(DROP in self.failure_config_list[ret_index].opt_type or \
-				TURNCATE_HISTORY in self.failure_config_list[ret_index].opt_type)):
-		
+			(any(i in opts for i in self.failure_config_list[ret_index].opt_type))):
 			print("failure condition satisfied for wedged request, now injecting failure")
 			dummy1, dummy2 = perform_failure_injection(None, \
 						None, self.config.replica_list.index(self.config.id), ret_index)
 
-			if dummy1 == True or dummy2 == True:
+			if (DROP in self.failure_config_list[ret_index].opt_type and \
+				(dummy1 == True or dummy2 == True)):
 				return
 
 		send(("wedged_data", wedged_data), to=self.olympus)
@@ -943,27 +959,35 @@ class Replica(process):
 		log.info(self.INFO + "Received request to catch up.")
 		self.catch_up_req_count += 1
 
+		opts = [DROP, CRASH, SLEEP]
 		ret_index = is_failure_condition_satisfied(str("catch_up"))
-		if (self.failure_config_list is not None and ret_index != -1):
+		if (self.failure_config_list is not None and ret_index != -1 and  \
+			(any(i in opts for i in self.failure_config_list[ret_index].opt_type))):
 			print("failure condition satisfied for catchup, now injecting failure")
 			dummy1, dummy2 = perform_failure_injection(None, \
 						None, self.config.replica_list.index(self.config.id), ret_index)
 
-			if dummy1 == True or dummy2 == True:
+			if (DROP in self.failure_config_list[ret_index].opt_type and \
+				(dummy1 == True or dummy2 == True)):
 				return
+
 		catch_up(longest_history)
 
 	def receive(msg=("running_state"), from_=o):
 		# Count to handle receipt of m'th get_running_state message failure trigger
 		self.get_running_state_req_count += 1
 
+		opts = [DROP, CRASH, SLEEP]
 		ret_index = is_failure_condition_satisfied(str("running_state_request"))
-		if (self.failure_config_list is not None and ret_index != -1):
+		if (self.failure_config_list is not None and ret_index != -1 and \
+			(any(i in opts for i in self.failure_config_list[ret_index].opt_type))):
+
 			print("failure condition satisfied for get_running_state request, now injecting failure")
 			dummy1, dummy2 = perform_failure_injection(None, \
 						None, self.config.replica_list.index(self.config.id), ret_index)
 
-			if dummy1 == True or dummy2 == True:
+			if (DROP in self.failure_config_list[ret_index].opt_type and \
+				(dummy1 == True or dummy2 == True)):
 				return
 
 		log.info(self.INFO + "Received request for running state, encrypting and sending the state")
