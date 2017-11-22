@@ -101,7 +101,6 @@ class Olympus(process):
 							else:
 								opt_arg.append(failure[1].replace(')','').split('(')[1].strip())
 							
-							print("Failure operations in new config map:", opt)
 							failure_config = FailureConfig(None, msg_count, shuttle_type, opt, opt_arg)
 							shuttle_type_map[shuttle_key] = failure_config
 
@@ -112,8 +111,6 @@ class Olympus(process):
 								shuttle_type_map[shuttle_key].opt_arg.append(None)
 							else:
 								shuttle_type_map[shuttle_key].opt_arg.append(failure[1].replace(')','').split('(')[1].strip())
-
-							print("Failure operations in old config map:", shuttle_type_map[shuttle_key].opt_type)
 
 					elif(len(failure) == 3):
 						shuttle_type = failure[0].split('(')[0].strip()
@@ -141,20 +138,21 @@ class Olympus(process):
 							shuttle_type_map[shuttle_key] = failure_config
 						else:
 							shuttle_type_map[shuttle_key].opt_type.append(failure[2].replace('(','').replace(')','').strip())
-							print("Failure operations in old config map:", shuttle_type_map[shuttle_key].opt_type)
 							
 							if (len(failure[1].replace(')','').split('(')) == 1):
 								shuttle_type_map[shuttle_key].opt_arg.append(None)
 							else:
 								shuttle_type_map[shuttle_key].opt_arg.append(failure[1].replace(')','').split('(')[1].strip())
 
+					'''
 					print("########### FAILURE CONFIG #############")
 					print("msg count : ",shuttle_type_map[shuttle_key].msg_count)
 					print("client ID : ",shuttle_type_map[shuttle_key].client_id)
 					print("type :", shuttle_type_map[shuttle_key].shuttle_type)
 					print("operations : ", shuttle_type_map[shuttle_key].opt_type)
 					print("opt arg : ", shuttle_type_map[shuttle_key].opt_arg)
-
+					'''
+					
 				self.failure_config_map[config_num] = [replica_index,shuttle_type_map]
 
 		# Send fault injection to everyone
