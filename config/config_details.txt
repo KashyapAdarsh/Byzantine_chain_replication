@@ -1,0 +1,39 @@
+Details of the config files which are used to test various triggers and failures of phase 3
+
+--------
+TRIGGERS :
+--------
+
+wedge_request : wedge_request_test_truncate_history.config
+
+new_configuration : new_config_crash.config
+
+checkpoint : checkpoint_crash.config
+
+completed_checkpoint : completed_checkpoint_sleep.config, drop_checkpoint_stmts.config
+
+get_running_state : running_state_drop.config
+
+catch_up : catchup.config
+
+----
+OPT : 
+----
+
+crash : new_config_crash.config, checkpoint_crash.config
+
+truncate_history : wedge_request_test_truncate_history.config
+
+sleep : completed_checkpoint_sleep.config
+
+drop : runningstate_drop.config, catchup.config
+
+increment_slot : increment_slot.config
+
+extra_op : extraop_drop_result_stmt.config
+
+invalid_order_sig : invalid_order_result_sign.config
+
+invalid_result_sig : invalid_order_result_sign.config
+
+drop_checkpt_stmts : drop_checkpoint_stmts.config
