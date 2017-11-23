@@ -248,8 +248,8 @@ For Algorithm loc we have - 350 core algorithm related lines, 190 lines related 
 LANGUAGE FEATURE USAGE
 ----------------------
 
-list comprehensions - 10
-dictionary comprehensions - 16
+list comprehensions - 15
+dictionary comprehensions - 22
 
 Distalgo features :
 
