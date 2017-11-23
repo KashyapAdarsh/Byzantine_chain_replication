@@ -22,7 +22,7 @@ NOTE : Most of the testcases check for things like order proof verification, res
 Performance Evalution - All working case
 -----------
 
-Raft2.da - elapsed time (seconds):  6.6313230991363525
+Raft2.da - elapsed time (seconds):  8.6313230991363525
 
 Our Implementation:
 	single host - 16.283s
