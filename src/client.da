@@ -83,16 +83,15 @@ class Client(process):
 		self.config_timer.stop()
 
 
+	# This method will be invoked at certain intervals to check if config is changed.
 	def check_config_change():
 		log.info(self.INFO + "Contacting olympus to check if config is changed.")
 		send(("is_config_changed", self.active_config), to=self.olympus)
 
 	#After all work load is processed, this method checks that dictionary contains expected content at end of test case
-
 	def check_expectedContent():
 		log.info(self.INFO + "verifying data store query request result from head to local data store")
 		return all(item in head_data_store.items() for item in self.data_store.items())
-
 
 	# Thi method will register a client to olympus
 	def register_with_olympus():
@@ -202,7 +201,6 @@ class Client(process):
 			index = 1
 
 		total_found = 0
-
 
 		for statement in response.result_proof.statements:
 			verify_key = nacl.signing.VerifyKey(self.replica_keys[self.replica_list[index]], \
