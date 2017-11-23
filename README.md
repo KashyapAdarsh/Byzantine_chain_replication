@@ -187,6 +187,12 @@ These are certain bugs and limitations that we have for the current implementati
 
 1)	Our code does not generate seperate log files for seperate configurations, it overwrites old log files if any.
 2)	Our implementation requires that config file has node details for replica and clients seperated by ';'
+3) There might be some issue because of message timing, all the configurations provided have been tested thoroughly
+   sometimes the behaviour is slightly different because of message delays.
+4) Few combinations of triggers and failures did not make sense to use and hence our system design does not support 
+   them e.g. using checkpoint(n) with change_operation/change_result.
+5) Few operations such as catchup, new config, runningstate works with n=1, this has been clarified by professor as 
+   well
 
 -------------
 CONTRIBUTIONS
@@ -233,7 +239,6 @@ Numbers of non-blank non-comment lines of code (LOC):
 	Algorithm : 540
 	Other : 376
 	Total : 916
-
 
 Used CLOC https://github.com/AlDanial/cloc
 
