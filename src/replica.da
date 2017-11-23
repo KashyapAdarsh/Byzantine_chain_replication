@@ -247,7 +247,7 @@ class Replica(process):
 		slot_or_res = []
 
 		if len(self.slot_list) >=2 and self.slot_list[-1] != self.slot_list[-2]+1:
-			log.info(self.INFO + "holes in slots, sending false as verify shuttle result")
+			log.info(self.INFO + "Holes are present, verification failed.")
 			return False
 
 		# This will check if there is anything dropped from statements
@@ -366,8 +366,6 @@ class Replica(process):
 		
 		ret_index = failure_config_list_lookup(NEW_CONFIGURATION) 
 		if (ret_index != -1):
-			print("#########################")
-			print(self.config.new_config_count)
 			if (self.config.new_config_count == self.failure_config_list[ret_index].msg_count):
 				if (msg != "dummy"):
 					self.config.new_config_count = -100
@@ -410,9 +408,6 @@ class Replica(process):
 	# 4) Above is repeated for both order and result shuttle
 
 	def perform_failure_injection(order_shuttle, result_shuttle, index, failure_config_index):
-		#log.info(self.INFO + "Performing failure injection for msg " + str(result_shuttle.msg_id))
-		#log.info(self.INFO + "Performing failure injection for msg ")
-
 		for idx, opt in enumerate(self.failure_config_list[failure_config_index].opt_type):
 			log.info(self.INFO + " Performing failure operation : " + str(opt))
 			# Here lets change the statement of index that is sent below in both order and result shuttle
@@ -449,7 +444,7 @@ class Replica(process):
 				# Decrypting the result statement first
 				res = pickle.loads(verify_key.verify(result_shuttle.statements[index]))
 				# We add hash of OK always
-				fake_result = hash("abracadabra")
+				fake_result = hash(OK)
 				# Modifying original result statement of this replica to something wrong
 				result_shuttle.statements[index] = sign_statement(ResultStatement(fake_result,res.operation),False)
 			
@@ -458,7 +453,7 @@ class Replica(process):
 				os._exit(-1)
 			
 			elif (opt == SLEEP):
-				log.info(self.INFO + "Injection operation sleep. I am sleeping for sometime.")
+				log.info(self.INFO + "Injecting operation sleep. I am sleeping for sometime.")
 				time.sleep(int(self.failure_config_list[failure_config_index].opt_arg[idx])) # put variable instead of static time
 
 			elif (opt == TURNCATE_HISTORY):
@@ -478,7 +473,7 @@ class Replica(process):
 				return True, True
 
 			elif (opt == INCREMENT_SLOT):
-				log.info(self.INFO + "increment slot failure is being injected")
+				log.info(self.INFO + "Increment slot failure is being injected")
 				print("injecting increment slot failure")
 				get_next_slot()
 
@@ -586,14 +581,7 @@ class Replica(process):
 			log.info(self.INFO + "Failure Injection condition satisfied for msg "+ str(operation.msg_id))
 			order_shuttle, result_shuttle = perform_failure_injection(order_shuttle, \
 						result_shuttle, self.config.replica_list.index(self.config.id), ret_index)
-		'''
-		print("Returning index : ", ret_index)
-		verify_key = nacl.signing.VerifyKey(self.config.replica_keys[self.config.id], encoder=nacl.encoding.HexEncoder)
-				# Decrypting the result statement first
-		res = pickle.loads(verify_key.verify(result_shuttle.statements[ret_index]))
 
-		print("BUGGER : ", res.result)
-		'''
 		# We have to send result to client and start result shuttle message
 		# backwards if it is a tail, else just forward the shuttle.
 		if (self.config.is_tail):
@@ -800,9 +788,7 @@ class Replica(process):
 				result = execute_operation(operation, "catch_up")
 				self.latest_result[operation.client_id] = (ResultStatement(hash(result),operation), result)
 		log.info(self.INFO + "catch up successful, sending hash of datastore.")
-		# print("After catch up sorted : ",sorted(self.config.data_store.items()))
 
-		print("******** - ", hash(sorted(self.data_store_backup.items())))
 		send(("catch_up_verification", hash(sorted(self.data_store_backup.items())), \
 			self.latest_result), to=self.olympus)
 
@@ -934,8 +920,7 @@ class Replica(process):
 		log.info(self.INFO + "Received reconfig command from olympus, making wedged data and sending it to olympus.")
 		wedged_data = wedgedData(self.config.id, self.history, self.checkpoint, get_current_slot())
 		# TODO - signing the wedged_data
-		#wedged_data = sign_statement(wedged_data)
-		# increasing the wedge_count to appropriately trigger wedge_request failure
+		
 		wedge_request_count += 1
 		opts = [DROP, TURNCATE_HISTORY, CRASH, SLEEP]
 		ret_index = is_failure_condition_satisfied(str("wedge_request"))
